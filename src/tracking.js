@@ -1,78 +1,4 @@
 /**
- * Atribuição de classe para em links do menu top 
- * para ser possível encaminhar parametros de url
- * ao disparar o evento de click
- * 
- * Autor: Jonas Souza
- */
- $("#topNav .links-topo a").addClass("tagueamento_final");
-
- /**
-  * Atribuição de classe para em links do menu principal do site 
-  * para ser possível encaminhar parametros de url
-  * ao disparar o evento de click
-  * 
-  * Autor: Jonas Souza
-  */
- $("#mainNav .subnavs a").addClass("tagueamento");
- $("#mainNav .subnavs .nova-aba a").removeClass("tagueamento");
- $("#mainNav .subnavs .nova-aba a").addClass("tagueamento_final");
- $("#mainNav .subnavs .nova-aba a").attr('target', '_blank');
- 
- 
- /**
-  * Função que retorna os parametros de url
-  * 
-  * Autor: Jonas Souza
-  * 
-  * Descontinuada em: 17/08/2023 
-  * (código comentado para não conflitar com a nova alternativa)
-  */
-//   function obterTraqueamento(parteUrl){
-//    let traqueamento = ""
-//    if (parteUrl) {
-//      traqueamento = "?" + parteUrl;
-//    } 
-//    return traqueamento;
-//  }
- 
- /**
-  * Evento de click disparado em links que contém a classe para que os 
-  * parametros de url que vem de links patrocinados/orgânicos 
-  * sejam encaminhados até a formulário de inscrição.
-  * 
-  * Para página externa (nova aba)
-  * Autor: Jonas Souza
-  * 
-  * Descontinuada em: 17/08/2023 
-  * (código comentado para não conflitar com a nova alternativa)
-  */
-//  $(".tagueamento").click(function (event) {
-//    event.preventDefault(event);
-//    var url = document.URL;
-//    var partesurl = url.split("?");
-//    window.location.href = this.href + obterTraqueamento(partesurl[1])
-//  });
- 
- /**
-  * Evento de click disparado em links que contém a classe para que os 
-  * parametros de url que vem de links patrocinados/orgânicos 
-  * sejam encaminhados até a formulário de inscrição.
-  * 
-  * Para página interna (mesma aba)
-  * Autor: Jonas Souza
-  * 
-  * Descontinuada em: 17/08/2023 
-  * (código comentado para não conflitar com a nova alternativa)
-  */
-//  $(".tagueamento_final").click(function (event) {
-//    event.preventDefault(event);
-//    var url = document.URL
-//    var partesurl = url.split("?");
-//    window.open(this.href + obterTraqueamento(partesurl[1]), '_blank');
-//  });
- 
- /**
   * Evento de click disparado em todos os links do site para que os 
   * parametros de url que vem de links patrocinados/orgânicos 
   * sejam encaminhados até a formulário de inscrição.
@@ -83,29 +9,76 @@
   * do site (https://www.domain.com) ou ficha de incrição (https://sub.domain.com) 
   * Autor: Jonas Souza - 17/08/2023
   */
- $("a").click(function (event) {
-  console.log(this.href.indexOf("#"))
-  
-  if(!$(this).hasClass('linkassiste') //se não for o elemento 'play' de vídeo
-      && $(this).attr('role') != 'button' //se nao for o elemento de controle carrossel
-      && $(this).attr('data-toggle') != 'dropdown' //se não o elemento dropdown
-      && $(this).attr('data-toggle') != 'tab' //se não o elemento tab
-      && $(this).attr('data-toggle') != 'modal' //se não o elemento que chama o modal
-      && this.href.indexOf("#") == -1) //se o elemento não tiver # no href
-  {
-    
-    let origin = window.location.origin;
-    let search = window.location.search;
-    
+$("a").click(function(event) {
+  if (
+    !$(this).hasClass("linkassiste filter-button") && //se não for o elemento 'play' de vídeo
+    this.href.indexOf("mailto:") == -1 && //se não for email
+    this.href.indexOf("tel:") == -1 && //se não for telefone
+    $(this).attr("role") != "button" && //se nao for o elemento de controle carrossel
+    $(this).attr("data-toggle") != "dropdown" && //se não o elemento dropdown
+    $(this).attr("data-toggle") != "tab" && //se não o elemento tab
+    $(this).attr("data-toggle") != "modal"
+  ) {
     // se o link tiver a origem do site ou ficha de incrição
-    if (origin == "https://www.domain.com" || origin == "https://sub.domain.com") {
-      event.preventDefault(event);
-      
-      let target = $(this).attr('target');
-      if(target === '_blank') {
-        window.open(this.href + search, '_blank');
-      } else {
-        window.location.href = this.href + search;
+    if (
+      origin == "https://www.domain.com" ||
+      origin == "https://sub.domain.com"
+    ) {
+      //se não o elemento que chama o modal
+      let target = $(this).attr("target");
+      let origin = this.origin;
+      let hash = this.hash;
+      let pathname = this.pathname;
+      let nextPage = origin + pathname;
+
+      let locationHash = window.location.hash;
+      let locationOrigin = window.location.origin;
+      let locationPathname = window.location.pathname;
+      let locationSearch = window.location.search;
+      let locationPage = locationOrigin + locationPathname;
+
+      let href;
+
+      if (locationSearch) { //se tem parametros no locationSearch
+        href = origin + pathname + hash + locationSearch;
+      } else { //parametros no locationHash
+        if (this.href.indexOf("#") != -1) { //se href tem #
+          href = origin + pathname + locationHash; //locationHash com parametros
+        } else { //href sem #
+          let parseUrl = locationHash.split("?"); //retirar os parametros do locationHash
+          href = origin + pathname + "?" + parseUrl[1];
+        }
+      }
+
+      if (this.href.indexOf("#") != -1) { //se href tem #
+        event.preventDefault(event);
+        a
+        if (locationPage == nextPage) { //mesma págin
+          if (hash) {
+            $("html, body").animate(
+              {
+                scrollTop: $(hash).position().top
+              },
+              1000,
+              "easeInOutExpo"
+            );
+          }
+          
+        } else { //pagina diferente
+          if (target === "_blank") {
+            window.open(href, "_blank");
+          } else {
+            window.location.href = href;
+          }
+        }
+       
+      } else {  //href sem #
+        event.preventDefault(event);
+        if (target === "_blank") {
+          window.open(href, "_blank");
+        } else {
+          window.location.href = href;
+        }
       }
     }
   }
