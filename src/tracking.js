@@ -19,16 +19,18 @@ $("a").click(function (event) {
     $(this).attr("data-toggle") != "tab" && //e não for o elemento tab
     $(this).attr("data-toggle") != "modal" //e não for o elemento que chama o modal
   ) {
+    
+    let origin = this.origin;
+    let target = $(this).attr("target");
+    let hash = this.hash;
+    let pathname = this.pathname;
+    let nextPage = origin + pathname;
+    
     // se o link tiver a origem do site ou ficha de incrição
     if (
       origin == "https://www.domain.com" ||
       origin == "https://sub.domain.com"
     ) {
-      let target = $(this).attr("target");
-      let origin = this.origin;
-      let hash = this.hash;
-      let pathname = this.pathname;
-      let nextPage = origin + pathname;
 
       let locationHash = window.location.hash;
       let locationOrigin = window.location.origin;
