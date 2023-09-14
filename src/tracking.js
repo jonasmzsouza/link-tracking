@@ -1,99 +1,91 @@
-/**
- * Evento de click disparado em todos os links do site para que os
- * parametros de url que vem de links patrocinados/orgânicos
- * sejam encaminhados até a formulário de inscrição.
- *
- * Esta alternativa contempla links gerados em
- * campos customizados do wordpress.
- * A regra só se aplica a links que contenham a origem (window.location.origin)
- * do site (https://www.domain.com) ou ficha de incrição (https://sub.domain.com)
- * Autor: Jonas Souza - 17/08/2023
- */
-$("a").click(function (event) {
+// Autor: Jonas Souza - 17/08/2023
+// Função para verificar se um link deve ser manipulado
+function shouldHandleLink(linkElement) {
+  const ignoreClasses = ["linkassiste", "filter-button"];
+  const ignoreProtocols = ["mailto:", "tel:"];
+  const role = $(linkElement).attr("role");
+  const dataToggle = $(linkElement).attr("data-toggle");
+
+  return (
+    ignoreClasses.every((className) => !$(linkElement).hasClass(className)) &&
+    !ignoreProtocols.some((protocol) =>
+      linkElement.href.startsWith(protocol)
+    ) &&
+    !["button", "dropdown", "tab", "modal"].includes(role) &&
+    dataToggle !== "dropdown" &&
+    dataToggle !== "tab" &&
+    dataToggle !== "modal"
+  );
+}
+
+// Função para manipular o clique em links
+function handleLinkClick(event) {
+  const linkElement = this;
+  const origin = linkElement.origin;
+  const target = $(linkElement).attr("target");
+  const hash = linkElement.hash;
+  const pathname = linkElement.pathname;
+  const nextPage = origin + pathname;
+
+  const locationHash = window.location.hash;
+  const locationOrigin = window.location.origin;
+  const locationPathname = window.location.pathname;
+  const locationSearch = window.location.search;
+  const locationPage = locationOrigin + locationPathname;
+
+  let href;
+
   if (
-    !$(this).hasClass("linkassiste filter-button") && //se não for o elemento 'play' de vídeo ou btn filtro
-    this.href.indexOf("mailto:") == -1 && //e não for email
-    this.href.indexOf("tel:") == -1 && //e não for telefone
-    $(this).attr("role") != "button" && //e nao for o elemento de controle carrossel
-    $(this).attr("data-toggle") != "dropdown" && //e não for o elemento dropdown
-    $(this).attr("data-toggle") != "tab" && //e não for o elemento tab
-    $(this).attr("data-toggle") != "modal" //e não for o elemento que chama o modal
+    origin == "https://www.domain.com" ||
+    origin == "https://sub.domain.com"
   ) {
-    
-    let origin = this.origin;
-    let target = $(this).attr("target");
-    let hash = this.hash;
-    let pathname = this.pathname;
-    let nextPage = origin + pathname;
-    
-    // se o link tiver a origem do site ou ficha de incrição
-    if (
-      origin == "https://www.domain.com" ||
-      origin == "https://sub.domain.com"
-    ) {
-
-      let locationHash = window.location.hash;
-      let locationOrigin = window.location.origin;
-      let locationPathname = window.location.pathname;
-      let locationSearch = window.location.search;
-      let locationPage = locationOrigin + locationPathname;
-
-      let href;
-
-      //se tem parametros no locationSearch
-      if (locationSearch) {
-        href = origin + pathname + hash + locationSearch;
-        //então parametros no locationHash
+    // Código para manipular o redirecionamento do link
+    if (locationSearch) {
+      href = origin + pathname + hash + locationSearch;
+    } else if (linkElement.href.indexOf("#") !== -1) {
+      href = origin + pathname + locationHash;
+    } else {
+      const parseUrl = locationHash.split("?");
+      if (parseUrl[1]) {
+        href = origin + pathname + "?" + parseUrl[1];
       } else {
-        //se href tem #
-        if (this.href.indexOf("#") != -1) {
-          //locationHash com parametros
-          href = origin + pathname + locationHash;
-          //então href sem #
-        } else {
-          //retirar os parametros do locationHash
-          let parseUrl = locationHash.split("?");
-          //se tem parametros
-          if (parseUrl[1]) {
-            href = origin + pathname + "?" + parseUrl[1];
-            //então href sem parametros
-          } else {
-            href = origin + pathname;
-          }
-        }
+        href = origin + pathname;
       }
+    }
 
-      //se href tem #
-      if (this.href.indexOf("#") != -1) {
-        event.preventDefault(event);
-        //mesma página
-        if (locationPage == nextPage) {
-          if (hash) {
-            $("html, body").animate(
-              {
-                scrollTop: $(hash).position().top,
-              },
-              1000,
-              "easeInOutExpo"
-            );
-          }
-          //pagina diferente
-        } else {
-          if (target === "_blank") {
-            window.open(href, "_blank");
-          } else {
-            window.location.href = href;
-          }
+    if (linkElement.href.indexOf("#") !== -1) {
+      event.preventDefault();
+      if (locationPage === nextPage) {
+        if (hash) {
+          $("html, body").animate(
+            {
+              scrollTop: $(hash).position().top,
+            },
+            1000,
+            "easeInOutExpo"
+          );
         }
-        //href sem #
       } else {
-        event.preventDefault(event);
         if (target === "_blank") {
           window.open(href, "_blank");
         } else {
           window.location.href = href;
         }
       }
+    } else {
+      event.preventDefault();
+      if (target === "_blank") {
+        window.open(href, "_blank");
+      } else {
+        window.location.href = href;
+      }
     }
+  }
+}
+
+// Adicionar um ouvinte de evento de clique apropriado aos links
+$("a").each(function () {
+  if (shouldHandleLink(this)) {
+    $(this).click(handleLinkClick);
   }
 });
