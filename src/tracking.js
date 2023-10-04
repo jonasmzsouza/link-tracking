@@ -38,8 +38,9 @@ $(document).on("ready", function () {
     let href;
 
     if (
-      origin == "https://www.domain.com" ||
-      origin == "https://sub.domain.com"
+      (origin == "https://www.domain.com" ||
+        origin == "https://sub.domain.com") &&
+        pathname != "/wp-admin/"
     ) {
       // Código para manipular o redirecionamento do link
       if (locationSearch) {
