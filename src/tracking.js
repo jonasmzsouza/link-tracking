@@ -40,7 +40,7 @@ $(document).on("ready", function () {
     if (
       (origin == "https://www.domain.com" ||
         origin == "https://sub.domain.com") &&
-        pathname != "/wp-admin/"
+      !pathname.includes("/wp-admin/")
     ) {
       // Código para manipular o redirecionamento do link
       if (locationSearch) {
