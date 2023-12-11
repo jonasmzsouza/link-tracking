@@ -20,28 +20,42 @@ $(document).on("ready", function () {
     );
   }
 
+  //Função para remover paramêtros de busca da URL
+  function removeURLParams(paramsArray) {
+    console.log("paramestros aqui");
+    const urlParams = new URLSearchParams(window.location.search);
+    paramsArray.forEach((param) => {
+      urlParams.delete(param);
+    });
+    const newURL = window.location.pathname + "?" + urlParams.toString();
+    history.replaceState({}, "", newURL);
+  }
+
   // Função para manipular o clique em links
   function handleLinkClick(event) {
-    const linkElement = this;
-    const origin = linkElement.origin;
-    const target = $(linkElement).attr("target");
-    const hash = linkElement.hash;
-    const pathname = linkElement.pathname;
-    const nextPage = origin + pathname;
-
-    const locationHash = window.location.hash;
-    const locationOrigin = window.location.origin;
-    const locationPathname = window.location.pathname;
-    const locationSearch = window.location.search;
-    const locationPage = locationOrigin + locationPathname;
-
-    let href;
-
     if (
       (origin == "https://www.domain.com" ||
         origin == "https://sub.domain.com") &&
       !pathname.includes("/wp-admin/")
     ) {
+      const linkElement = this;
+      const origin = linkElement.origin;
+      const target = $(linkElement).attr("target");
+      const hash = linkElement.hash;
+      const pathname = linkElement.pathname;
+      const nextPage = origin + pathname;
+      
+      // Chama a função para remover os parâmetros específicos
+      removeURLParams(["s", "tipo", "categoria"]);
+
+      const locationHash = window.location.hash;
+      const locationOrigin = window.location.origin;
+      const locationPathname = window.location.pathname;
+      const locationSearch = window.location.search;
+      const locationPage = locationOrigin + locationPathname;
+
+      let href;
+
       // Código para manipular o redirecionamento do link
       if (locationSearch) {
         href = origin + pathname + hash + locationSearch;
