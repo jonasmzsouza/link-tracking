@@ -1,6 +1,21 @@
-// Autor: Jonas Souza - 17/08/2023
-// Função para verificar se um link deve ser manipulado
+/**
+ * Autor: Jonas Souza
+ * Data de Criação: 17/08/2023
+ * Última atualização: 12/12/2023
+ *
+ * Implementação para manipulação de links do site
+ * Está implementação mantém alguns paramêtros de pesquisa
+ * que são de origem de anúncios para fins de traqueamento
+ * e remoção de outros paramêtros de pesquisa quem são de
+ * origem de páginas de pesquisa do site 'paramsSiteArray'.
+ */
+
 $(document).on("ready", function () {
+    /**
+   * Função para verificar se um link deve ser manipulado
+   * Útil para ignorar açguns tipos de link.
+   * @param linkElement HTMLElement
+   */
   function shouldHandleLink(linkElement) {
     const ignoreClasses = ["linkassiste", "filter-button"];
     const ignoreProtocols = ["mailto:", "tel:"];
@@ -20,56 +35,72 @@ $(document).on("ready", function () {
     );
   }
 
-  //Função para remover paramêtros de busca da URL
-  function removeURLParams(paramsArray) {
-    console.log("paramestros aqui");
-    const urlParams = new URLSearchParams(window.location.search);
+  /**
+   * Função para remover paramêtros de busca da URL.
+   * Útil navegação pós pesquisa no site
+   * @param paramsSiteArray Array
+   * @param search String
+   * @return urlParams String
+   */
+  function removeURLParams(paramsArray, search) {
+    const urlParams = new URLSearchParams(search);
     paramsArray.forEach((param) => {
       urlParams.delete(param);
     });
-    const newURL = window.location.pathname + "?" + urlParams.toString();
-    history.replaceState({}, "", newURL);
+
+    const queryString = urlParams.toString();
+    const newSearch = queryString ? "?" + queryString : "";
+    return newSearch;
   }
 
-  // Função para manipular o clique em links
+  /**
+   * Função para manipular o clique em links.
+   * Útil para verificar o link do elemento é para a origen do site,
+   * chamar funções com responsabilidades específicas e redirecionar o link
+   * @param event Event
+   */
   function handleLinkClick(event) {
+    const linkElement = this;
+    const origin = linkElement.origin;
+    const pathname = linkElement.pathname;
+    const target = $(linkElement).attr("target");
+    const hash = linkElement.hash;
+    const nextPage = origin + pathname;
+
     if (
       (origin == "https://www.domain.com" ||
         origin == "https://sub.domain.com") &&
       !pathname.includes("/wp-admin/")
     ) {
-      const linkElement = this;
-      const origin = linkElement.origin;
-      const target = $(linkElement).attr("target");
-      const hash = linkElement.hash;
-      const pathname = linkElement.pathname;
-      const nextPage = origin + pathname;
-      
-      // Chama a função para remover os parâmetros específicos
-      removeURLParams(["s", "tipo", "categoria"]);
-
       const locationHash = window.location.hash;
       const locationOrigin = window.location.origin;
       const locationPathname = window.location.pathname;
       const locationSearch = window.location.search;
       const locationPage = locationOrigin + locationPathname;
 
+      const paramsArray = ["s", "tipo", "categoria"];
       let href;
 
-      // Código para manipular o redirecionamento do link
+      // gera href abrangendo diversos cenários
       if (locationSearch) {
-        href = origin + pathname + hash + locationSearch;
+        const newSearch = removeURLParams(paramsArray, locationSearch);
+        href = origin + pathname + hash + newSearch;
       } else if (linkElement.href.indexOf("#") !== -1) {
-        href = origin + pathname + locationHash;
+        const parseUrl = locationHash.split("?");
+        const parseUrlHash = parseUrl[0];
+        const newSearch = removeURLParams(paramsArray, parseUrl[1]);
+        href = origin + pathname + parseUrlHash + newSearch;
       } else {
         const parseUrl = locationHash.split("?");
         if (parseUrl[1]) {
-          href = origin + pathname + "?" + parseUrl[1];
+          const newSearch = removeURLParams(paramsArray, parseUrl[1]);
+          href = origin + pathname + newSearch;
         } else {
           href = origin + pathname;
         }
       }
 
+      // redireciona o link para diversos cenários
       if (linkElement.href.indexOf("#") !== -1) {
         event.preventDefault();
         if (locationPage === nextPage) {
@@ -100,7 +131,9 @@ $(document).on("ready", function () {
     }
   }
 
-  // Adicionar um ouvinte de evento de clique apropriado aos links
+  /**
+   * Adicionar um ouvinte de evento de clique apropriado aos links
+   */
   $("a").each(function () {
     if (shouldHandleLink(this)) {
       $(this).click(handleLinkClick);
