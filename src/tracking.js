@@ -42,9 +42,9 @@ $(document).on("ready", function () {
    * @param search String
    * @return urlParams String
    */
-  function removeURLParams(paramsArray, search) {
+  function removeURLParams(paramsSiteArray, search) {
     const urlParams = new URLSearchParams(search);
-    paramsArray.forEach((param) => {
+    paramsSiteArray.forEach((param) => {
       urlParams.delete(param);
     });
 
@@ -78,22 +78,22 @@ $(document).on("ready", function () {
       const locationSearch = window.location.search;
       const locationPage = locationOrigin + locationPathname;
 
-      const paramsArray = ["s", "tipo", "categoria"];
+      const paramsSiteArray = ["s", "tipo", "categoria"];
       let href;
 
       // gera href abrangendo diversos cenários
       if (locationSearch) {
-        const newSearch = removeURLParams(paramsArray, locationSearch);
+        const newSearch = removeURLParams(paramsSiteArray, locationSearch);
         href = origin + pathname + hash + newSearch;
       } else if (linkElement.href.indexOf("#") !== -1) {
         const parseUrl = locationHash.split("?");
         const parseUrlHash = parseUrl[0];
-        const newSearch = removeURLParams(paramsArray, parseUrl[1]);
+        const newSearch = removeURLParams(paramsSiteArray, parseUrl[1]);
         href = origin + pathname + parseUrlHash + newSearch;
       } else {
         const parseUrl = locationHash.split("?");
         if (parseUrl[1]) {
-          const newSearch = removeURLParams(paramsArray, parseUrl[1]);
+          const newSearch = removeURLParams(paramsSiteArray, parseUrl[1]);
           href = origin + pathname + newSearch;
         } else {
           href = origin + pathname;
