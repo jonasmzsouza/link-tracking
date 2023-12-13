@@ -1,7 +1,7 @@
 /**
  * Autor: Jonas Souza
  * Data de Criação: 17/08/2023
- * Última atualização: 12/12/2023
+ * Última atualização: 13/12/2023
  *
  * Implementação para manipulação de links do site
  * Está implementação mantém alguns paramêtros de pesquisa
@@ -11,13 +11,14 @@
  */
 
 $(document).on("ready", function () {
-    /**
+  /**
    * Função para verificar se um link deve ser manipulado
-   * Útil para ignorar açguns tipos de link.
+   * Útil para ignorar alguns tipos de link.
    * @param linkElement HTMLElement
+   * @return bool
    */
   function shouldHandleLink(linkElement) {
-    const ignoreClasses = ["linkassiste", "filter-button"];
+    const ignoreClasses = ["linkassiste", "filter-button", "page-numbers"];
     const ignoreProtocols = ["mailto:", "tel:"];
     const role = $(linkElement).attr("role");
     const dataToggle = $(linkElement).attr("data-toggle");
