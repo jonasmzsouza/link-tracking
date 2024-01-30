@@ -68,18 +68,22 @@ $(document).on("ready", function () {
     const hash = linkElement.hash;
     const nextPage = origin + pathname;
 
-    if (
-      (origin == "https://www.domain.com" ||
-        origin == "https://sub.domain.com") &&
-      !pathname.includes("/wp-admin/")
-    ) {
+    const acceptOrigins = [
+      "https://www.domain.com",
+      "https://sub.domain.com",
+      "www.domain.com",
+      "sub.domain.com",
+    ];
+    const ignorePathnames = ["/wp-admin/"];
+    const paramsSiteArray = ["s", "tipo", "categoria"];
+
+    if (origin.includes(acceptOrigins) && !pathname.includes(ignorePathnames)) {
       const locationHash = window.location.hash;
       const locationOrigin = window.location.origin;
       const locationPathname = window.location.pathname;
       const locationSearch = window.location.search;
       const locationPage = locationOrigin + locationPathname;
 
-      const paramsSiteArray = ["s", "tipo", "categoria"];
       let href;
 
       // gera href abrangendo diversos cenários
