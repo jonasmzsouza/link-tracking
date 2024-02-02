@@ -198,7 +198,7 @@ $(document).on("ready", function () {
    * @return {bool} bool
    */
   function shouldHandleForm(formElement) {
-    const acceptIds = ["buscaPorTexto", "search-categoria"];
+    const acceptIds = ["searchForm"];
     return (handleFormSubmit = acceptIds.some((acceptedId) =>
       formElement.id.includes(acceptedId)
     ));
