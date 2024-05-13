@@ -1,14 +1,26 @@
 /**
  * Autor: Jonas Souza
  * Data de Criação: 17/08/2023
- * Última atualização: 31/01/2024
+ * Última atualização: 13/05/2024
  *
  * Implementação para manipulação de links do site e formulários de consulta
  * Está implementação mantém alguns paramêtros de pesquisa
- * que são de origem de anúncios para fins de traqueamento
+ * que são de origem de anúncios para fins de traqueamento (rastreamento)
  * e remoção de outros paramêtros de pesquisa quem são de
  * origem de páginas de pesquisa do site 'siteParamsArray'.
  */
+
+// Configuração global
+const config = {
+  acceptOrigins: ["www.domain.com", "sub.domain.com"], //manipular links nas origens aceitas
+  acceptFormIds: ["searchForm"], //levar o rastreamento para os formulários aceitos
+  ignorePathnames: ["/wp-admin/"], //ignorar o rastreamento em pathnames específicos
+  ignoreClasses: ["linkassiste", "filter-button", "page-numbers"], //ignorar os links que contém as classes
+  ignoreProtocols: ["mailto:", "tel:"], //ignorar os links que contém os protocolos
+  dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link 
+  attributes: ["role", "data-toggle", "data-bs-toggle"], //atributos específicos de link
+  siteParamsArray: ["s", "tipo", "categoria"] //remover os parametros de pesquisa
+};
 
 $(document).on("ready", function () {
   /////////////////////////////////LINK/////////////////////////////////////
@@ -28,21 +40,16 @@ $(document).on("ready", function () {
    * @return {bool}
    */
   function shouldHandleLink(linkElement) {
-    const ignoreClasses = ["linkassiste", "filter-button", "page-numbers"];
-    const ignoreProtocols = ["mailto:", "tel:"];
-    const role = $(linkElement).attr("role");
-    const dataToggle = $(linkElement).attr("data-toggle");
-    const dataBsToggle = $(linkElement).attr("data-bs-toggle");
-    const dataItems = ["button", "dropdown", "tab", "modal"];
+    const { ignoreClasses, ignoreProtocols, dataItems, attributes } = config;
 
     return (
       ignoreClasses.every((className) => !$(linkElement).hasClass(className)) &&
       !ignoreProtocols.some((protocol) =>
         linkElement.href.startsWith(protocol)
       ) &&
-      !dataItems.includes(role) &&
-      !dataItems.includes(dataToggle) &&
-      !dataItems.includes(dataBsToggle)
+      !attributes.some((attribute) =>
+        dataItems.includes($(linkElement).attr(attribute))
+      )
     );
   }
 
@@ -60,8 +67,7 @@ $(document).on("ready", function () {
     const hash = linkElement.hash;
     const page = origin + pathname;
 
-    const acceptOrigins = ["www.domain.com", "sub.domain.com"];
-    const ignorePathnames = ["/wp-admin/"];
+    const { acceptOrigins, ignorePathnames } = config;    
 
     // Verifica se o link deve ser manipulado
     const shouldHandleLink =
@@ -123,7 +129,8 @@ $(document).on("ready", function () {
    * @return {String} urlParams
    */
   function removeURLParams(search) {
-    const siteParamsArray = ["s", "tipo", "categoria"];
+    const { siteParamsArray } = config;
+
     const urlParams = new URLSearchParams(search);
     siteParamsArray.forEach((param) => {
       urlParams.delete(param);
@@ -198,9 +205,9 @@ $(document).on("ready", function () {
    * @return {bool} bool
    */
   function shouldHandleForm(formElement) {
-    const acceptIds = ["searchForm"];
-    return (handleFormSubmit = acceptIds.some((acceptedId) =>
-      formElement.id.includes(acceptedId)
+    const { acceptFormIds } = config;
+    return (handleFormSubmit = acceptFormIds.some((acceptedFormId) =>
+      formElement.id.includes(acceptedFormId)
     ));
   }
 
