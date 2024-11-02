@@ -4,10 +4,10 @@
  * Última atualização: 01/11/2024
  *
  * Implementação para manipulação de links do site e formulários de consulta
- * Está implementação mantém alguns paramêtros de pesquisa
- * que são de origem de anúncios para fins de traqueamento (rastreamento)
- * e remoção de outros paramêtros de pesquisa quem são de
- * origem de páginas de pesquisa do site 'siteParamsArray'.
+ * Esta implementação mantém alguns parâmetros de pesquisa
+ * que são de origem de anúncios para fins de rastreamento
+ * e remove outros parâmetros de pesquisa que são de
+ * origem de páginas de pesquisa do site.
  */
 
 // Configuração global
@@ -23,14 +23,12 @@ const config = {
   siteParamsArray: ["s", "tipo", "categoria"], //remover os parametros de pesquisa
 };
 
-$(document).on("ready", function () {
-  /////////////////////////////////LINK/////////////////////////////////////
-  /**
-   * Adicionar um ouvinte de evento de clique apropriado aos links
-   */
-  $("a").each(function () {
-    if (shouldHandleLink(this)) {
-      $(this).click(handleLinkClick);
+document.addEventListener("DOMContentLoaded", function () {
+  ///////////////////////////////// LINK /////////////////////////////////////
+
+  document.querySelectorAll("a").forEach(function (link) {
+    if (shouldHandleLink(link)) {
+      link.addEventListener("click", handleLinkClick);
     }
   });
 
@@ -41,7 +39,13 @@ $(document).on("ready", function () {
    * @return {bool}
    */
   function shouldHandleLink(linkElement) {
-    const { ignoreClasses, ignoreProtocols, ignoreExtensions, dataItems, attributes } = config;
+    const {
+      ignoreClasses,
+      ignoreProtocols,
+      ignoreExtensions,
+      dataItems,
+      attributes,
+    } = config;
 
     // Verificar se o link termina com uma das extensões a serem ignoradas
     const isIgnoredFileType = ignoreExtensions.some((ext) =>
@@ -49,12 +53,14 @@ $(document).on("ready", function () {
     );
 
     return (
-      ignoreClasses.every((className) => !$(linkElement).hasClass(className)) &&
+      ignoreClasses.every(
+        (className) => !linkElement.classList.contains(className)
+      ) &&
       !ignoreProtocols.some((protocol) =>
         linkElement.href.startsWith(protocol)
       ) &&
       !attributes.some((attribute) =>
-        dataItems.includes($(linkElement).attr(attribute))
+        dataItems.includes(linkElement.getAttribute(attribute))
       ) &&
       !isIgnoredFileType
     );
@@ -67,10 +73,10 @@ $(document).on("ready", function () {
    * @param {Event} event
    */
   function handleLinkClick(event) {
-    const linkElement = this;
+    const linkElement = event.currentTarget;
     const origin = linkElement.origin;
     const pathname = linkElement.pathname;
-    const target = $(linkElement).attr("target");
+    const target = linkElement.getAttribute("target");
     const hash = linkElement.hash;
     const page = origin + pathname;
 
@@ -90,18 +96,17 @@ $(document).on("ready", function () {
         pathname,
         hash
       );
-
       handleLinkRedirect(event, isHashSymbolPresent, href, page, hash, target);
     }
   }
 
   /**
    * Gera o href considerando diferentes cenários
-   * @param {Array} linkElement
+   * @param {HTMLElement} linkElement
    * @param {String} origin
    * @param {String} pathname
    * @param {String} hash
-   * @return {String} href
+   * @return {Object} {href, isHashSymbolPresent}
    */
   function generateHref(linkElement, origin, pathname, hash) {
     const locationHash = window.location.hash;
@@ -109,7 +114,7 @@ $(document).on("ready", function () {
 
     let href = origin + pathname;
     let newSearch = "";
-    const isHashSymbolPresent = linkElement.href.indexOf("#") !== -1;
+    const isHashSymbolPresent = linkElement.href.includes("#");
 
     if (locationSearch) {
       newSearch = removeURLParams(locationSearch);
@@ -119,12 +124,7 @@ $(document).on("ready", function () {
       if (parseUrl[1]) {
         newSearch = removeURLParams(parseUrl[1]);
       }
-
-      if (isHashSymbolPresent) {
-        href += newSearch + hash;
-      } else {
-        href += newSearch;
-      }
+      href += isHashSymbolPresent ? newSearch + hash : newSearch;
     } else {
       href += hash;
     }
@@ -133,22 +133,20 @@ $(document).on("ready", function () {
   }
 
   /**
-   * Função para remover paramêtros de busca da URL.
+   * Remove parâmetros de busca da URL
    * Útil navegação pós pesquisa no site
    * @param {String} search
-   * @return {String} urlParams
+   * @return {String}
    */
   function removeURLParams(search) {
     const { siteParamsArray } = config;
-
     const urlParams = new URLSearchParams(search);
+
     siteParamsArray.forEach((param) => {
       urlParams.delete(param);
     });
 
-    const queryString = urlParams.toString();
-    const newSearch = queryString ? "?" + queryString : "";
-    return newSearch;
+    return urlParams.toString() ? "?" + urlParams.toString() : "";
   }
 
   /**
@@ -170,20 +168,12 @@ $(document).on("ready", function () {
   ) {
     event.preventDefault();
 
-    const locationOrigin = window.location.origin;
-    const locationPathname = window.location.pathname;
-    const locationPage = locationOrigin + locationPathname;
+    const locationPage = window.location.origin + window.location.pathname;
 
     if (isHashSymbolPresent) {
       if (page === locationPage) {
         if (hash) {
-          $("html, body").animate(
-            {
-              scrollTop: $(hash).position().top,
-            },
-            1000,
-            "easeInOutExpo"
-          );
+          document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
         }
       } else {
         if (target === "_blank") {
@@ -201,46 +191,47 @@ $(document).on("ready", function () {
     }
   }
 
-  /////////////////////////////////FORMULARIO/////////////////////////////////////
+  // Animação de scrollTop para links com target="_blank"
+  if (window.location.hash) {
+    document
+      .querySelector(window.location.hash)
+      ?.scrollIntoView({ behavior: "smooth" });
+  }
+
+  ///////////////////////////////// FORMULÁRIO /////////////////////////////////////
+
+  document.querySelectorAll("form").forEach((form) => {
+    form.addEventListener("submit", handleFormSubmit);
+  });
 
   /**
-   * Adicionar um ouvinte de evento de submit apropriado aos formulários
-   */
-  $("form").submit(handleFormSubmit);
-
-  /**
-   * Função para verificar se um form deve ser manipulado
+   * Verifica se o formulário deve ser manipulado
    * Útil para aceitar alguns formulários de busca.
    * @param {HTMLElement} formElement
-   * @return {bool} bool
+   * @return {bool}
    */
   function shouldHandleForm(formElement) {
     const { acceptFormIds } = config;
-    return (handleFormSubmit = acceptFormIds.some((acceptedFormId) =>
+    return acceptFormIds.some((acceptedFormId) =>
       formElement.id.includes(acceptedFormId)
-    ));
+    );
   }
 
   /**
-   * Função para manipular o submit em formulários.
+   * Manipula o envio do formulário
    * Preserva URLSearchParams existente e adiciona as do formulário
    * @param {Event} event
    */
   function handleFormSubmit(event) {
-    if (shouldHandleForm(this)) {
+    const formElement = event.target;
+
+    if (shouldHandleForm(formElement)) {
       event.preventDefault();
 
-      const formElement = this;
       const locationHash = window.location.hash;
-      let locationSearch = "";
-
-      // Verifica se há parâmetros de consulta na hash
-      if (locationHash.includes("?")) {
-        const hashParts = locationHash.split("?");
-        locationSearch = "?" + hashParts[1];
-      } else {
-        locationSearch = window.location.search;
-      }
+      let locationSearch = locationHash.includes("?")
+        ? "?" + locationHash.split("?")[1]
+        : window.location.search;
 
       if (locationSearch) {
         const urlParams = new URLSearchParams(removeURLParams(locationSearch));
@@ -255,19 +246,8 @@ $(document).on("ready", function () {
       }
 
       // Desanexa o manipulador de evento de envio de formulário após o primeiro envio
-      $(formElement).off("submit").submit();
-    }
-  }
-});
-
-// Animação de `scrollTop` na página de destino para links com `target="_blank"` 
-document.addEventListener("DOMContentLoaded", function () {
-  if (window.location.hash) {
-    const hash = window.location.hash;
-    const target = document.querySelector(hash);
-
-    if (target) {
-      target.scrollIntoView({ behavior: "smooth" });
+      formElement.removeEventListener("submit", handleFormSubmit);
+      formElement.submit();
     }
   }
 });
