@@ -1,7 +1,7 @@
 /**
  * Autor: Jonas Souza
  * Data de Criação: 17/08/2023
- * Última atualização: 13/05/2024
+ * Última atualização: 01/11/2024
  *
  * Implementação para manipulação de links do site e formulários de consulta
  * Está implementação mantém alguns paramêtros de pesquisa
@@ -17,6 +17,7 @@ const config = {
   ignorePathnames: ["/wp-admin/"], //ignorar o rastreamento em pathnames específicos
   ignoreClasses: ["linkassiste", "filter-button", "page-numbers"], //ignorar os links que contém as classes
   ignoreProtocols: ["mailto:", "tel:"], //ignorar os links que contém os protocolos
+  ignoreExtensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx"], //ignorar extensões de arquivo
   dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link
   attributes: ["role", "data-toggle", "data-bs-toggle"], //atributos específicos de link
   siteParamsArray: ["s", "tipo", "categoria"], //remover os parametros de pesquisa
@@ -40,7 +41,12 @@ $(document).on("ready", function () {
    * @return {bool}
    */
   function shouldHandleLink(linkElement) {
-    const { ignoreClasses, ignoreProtocols, dataItems, attributes } = config;
+    const { ignoreClasses, ignoreProtocols, ignoreExtensions, dataItems, attributes } = config;
+
+    // Verificar se o link termina com uma das extensões a serem ignoradas
+    const isIgnoredFileType = ignoreExtensions.some((ext) =>
+      linkElement.href.endsWith(ext)
+    );
 
     return (
       ignoreClasses.every((className) => !$(linkElement).hasClass(className)) &&
@@ -49,7 +55,8 @@ $(document).on("ready", function () {
       ) &&
       !attributes.some((attribute) =>
         dataItems.includes($(linkElement).attr(attribute))
-      )
+      ) &&
+      !isIgnoredFileType
     );
   }
 
