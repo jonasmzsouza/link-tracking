@@ -17,9 +17,9 @@ const config = {
   ignorePathnames: ["/wp-admin/"], //ignorar o rastreamento em pathnames específicos
   ignoreClasses: ["linkassiste", "filter-button", "page-numbers"], //ignorar os links que contém as classes
   ignoreProtocols: ["mailto:", "tel:"], //ignorar os links que contém os protocolos
-  dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link 
+  dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link
   attributes: ["role", "data-toggle", "data-bs-toggle"], //atributos específicos de link
-  siteParamsArray: ["s", "tipo", "categoria"] //remover os parametros de pesquisa
+  siteParamsArray: ["s", "tipo", "categoria"], //remover os parametros de pesquisa
 };
 
 $(document).on("ready", function () {
@@ -67,7 +67,7 @@ $(document).on("ready", function () {
     const hash = linkElement.hash;
     const page = origin + pathname;
 
-    const { acceptOrigins, ignorePathnames } = config;    
+    const { acceptOrigins, ignorePathnames } = config;
 
     // Verifica se o link deve ser manipulado
     const shouldHandleLink =
@@ -101,22 +101,25 @@ $(document).on("ready", function () {
     const locationSearch = window.location.search;
 
     let href = origin + pathname;
+    let newSearch = "";
     const isHashSymbolPresent = linkElement.href.indexOf("#") !== -1;
 
     if (locationSearch) {
-      const newSearch = removeURLParams(locationSearch);
-      href += hash + newSearch;
-    } else if (isHashSymbolPresent) {
-      const parseUrl = locationHash.split("?");
-      const parseUrlHash = parseUrl[0];
-      const newSearch = removeURLParams(parseUrl[1]);
-      href += parseUrlHash + newSearch;
-    } else {
+      newSearch = removeURLParams(locationSearch);
+      href += newSearch + hash;
+    } else if (locationHash) {
       const parseUrl = locationHash.split("?");
       if (parseUrl[1]) {
-        const newSearch = removeURLParams(parseUrl[1]);
+        newSearch = removeURLParams(parseUrl[1]);
+      }
+
+      if (isHashSymbolPresent) {
+        href += newSearch + hash;
+      } else {
         href += newSearch;
       }
+    } else {
+      href += hash;
     }
 
     return { href, isHashSymbolPresent };
@@ -246,6 +249,18 @@ $(document).on("ready", function () {
 
       // Desanexa o manipulador de evento de envio de formulário após o primeiro envio
       $(formElement).off("submit").submit();
+    }
+  }
+});
+
+// Animação de `scrollTop` na página de destino para links com `target="_blank"` 
+document.addEventListener("DOMContentLoaded", function () {
+  if (window.location.hash) {
+    const hash = window.location.hash;
+    const target = document.querySelector(hash);
+
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth" });
     }
   }
 });
