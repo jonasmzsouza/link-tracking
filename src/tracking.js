@@ -20,7 +20,7 @@ const config = {
   ignoreExtensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx"], //ignorar extensões de arquivo
   dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link
   attributes: ["role", "data-toggle", "data-bs-toggle"], //atributos específicos de link
-  siteParamsArray: ["s", "tipo", "categoria"], //remover os parametros de pesquisa
+  siteParamsArray: ["s", "tipo", "categoria", "termo"], //remover os parametros de pesquisa
 };
 
 document.addEventListener("DOMContentLoaded", function () {
