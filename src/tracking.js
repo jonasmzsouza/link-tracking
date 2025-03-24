@@ -53,15 +53,9 @@ document.addEventListener("DOMContentLoaded", function () {
     );
 
     return (
-      ignoreClasses.every(
-        (className) => !linkElement.classList.contains(className)
-      ) &&
-      !ignoreProtocols.some((protocol) =>
-        linkElement.href.startsWith(protocol)
-      ) &&
-      !attributes.some((attribute) =>
-        dataItems.includes(linkElement.getAttribute(attribute))
-      ) &&
+      !ignoreClasses.some((className) => linkElement.classList.contains(className)) &&
+      !ignoreProtocols.some((protocol) => linkElement.href.startsWith(protocol)) &&
+      !attributes.some((attribute) => dataItems.includes(linkElement.getAttribute(attribute))) &&
       !isIgnoredFileType
     );
   }
