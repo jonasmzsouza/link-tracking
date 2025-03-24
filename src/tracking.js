@@ -144,45 +144,25 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   /**
-   * Redireciona o link para diferentes cenários
-   * @param {Event} event
-   * @param {bool} isHashSymbolPresent
-   * @param {String} href
-   * @param {String} page
-   * @param {String} hash
-   * @param {String} target
-   */
-  function handleLinkRedirect(
-    event,
-    isHashSymbolPresent,
-    href,
-    page,
-    hash,
-    target
-  ) {
+ * Redireciona o link para diferentes cenários
+ * @param {Event} event
+ * @param {bool} isHashSymbolPresent
+ * @param {String} href
+ * @param {String} page
+ * @param {String} hash
+ * @param {String} target
+ */
+  function handleLinkRedirect(event, isHashSymbolPresent, href, page, hash, target) {
     event.preventDefault();
 
     const locationPage = window.location.origin + window.location.pathname;
 
-    if (isHashSymbolPresent) {
-      if (page === locationPage) {
-        if (hash) {
-          document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
-        }
-      } else {
-        if (target === "_blank") {
-          window.open(href, "_blank");
-        } else {
-          window.location.href = href;
-        }
-      }
-    } else {
-      if (target === "_blank") {
-        window.open(href, "_blank");
-      } else {
-        window.location.href = href;
-      }
+    if (isHashSymbolPresent && page === locationPage && hash) {
+      document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
+      return;
     }
+
+    target === "_blank" ? window.open(href, "_blank") : (window.location.href = href);
   }
 
   // Animação de scrollTop para links com target="_blank"
