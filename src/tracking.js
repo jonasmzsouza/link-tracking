@@ -15,7 +15,7 @@ const config = {
   acceptOrigins: ["www.domain.com", "sub.domain.com"], //manipular links nas origens aceitas
   acceptFormIds: ["searchForm"], //levar o rastreamento para os formulários aceitos
   ignorePathnames: ["/wp-admin/"], //ignorar o rastreamento em pathnames específicos
-  ignoreClasses: ["linkassiste", "filter-button", "page-numbers"], //ignorar os links que contém as classes
+  ignoreClasses: ["linkassiste", "filter-button", "page-numbers", "load-more"], //ignorar os links que contém as classes
   ignoreProtocols: ["mailto:", "tel:"], //ignorar os links que contém os protocolos
   ignoreExtensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx"], //ignorar extensões de arquivo
   dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link
@@ -26,10 +26,10 @@ const config = {
 document.addEventListener("DOMContentLoaded", function () {
   ///////////////////////////////// LINK /////////////////////////////////////
 
-  document.querySelectorAll("a").forEach(function (link) {
-    if (shouldHandleLink(link)) {
-      link.addEventListener("click", handleLinkClick);
-    }
+  document.addEventListener("click", function (event) {
+    const linkElement = event.target.closest("a");
+    if (!linkElement || !shouldHandleLink(linkElement)) return;
+    handleLinkClick(event, linkElement);
   });
 
   /**
@@ -79,9 +79,9 @@ document.addEventListener("DOMContentLoaded", function () {
    * Útil para verificar o link do elemento é para a origen do site,
    * chamar funções com responsabilidades específicas e redirecionar o link
    * @param {Event} event
+   * @param {HTMLElement} linkElement
    */
-  function handleLinkClick(event) {
-    const linkElement = event.currentTarget;
+  function handleLinkClick(event, linkElement) {
     const origin = linkElement.origin;
     const pathname = linkElement.pathname;
     const target = linkElement.getAttribute("target");
@@ -90,20 +90,11 @@ document.addEventListener("DOMContentLoaded", function () {
 
     const { acceptOrigins, ignorePathnames } = config;
 
-    // Verifica se o link deve ser manipulado
-    const shouldHandleLink =
+    if (
       acceptOrigins.some((acceptedOrigin) => origin.includes(acceptedOrigin)) &&
-      !ignorePathnames.some((ignoredPathname) =>
-        pathname.includes(ignoredPathname)
-      );
-
-    if (shouldHandleLink) {
-      const { href, isHashSymbolPresent } = generateHref(
-        linkElement,
-        origin,
-        pathname,
-        hash
-      );
+      !ignorePathnames.some((ignoredPathname) => pathname.includes(ignoredPathname))
+    ) {
+      const { href, isHashSymbolPresent } = generateHref(linkElement, origin, pathname, hash);
       handleLinkRedirect(event, isHashSymbolPresent, href, page, hash, target);
     }
   }
