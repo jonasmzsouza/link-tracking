@@ -47,17 +47,31 @@ document.addEventListener("DOMContentLoaded", function () {
       attributes,
     } = config;
 
-    // Verificar se o link termina com uma das extensões a serem ignoradas
-    const isIgnoredFileType = ignoreExtensions.some((ext) =>
-      linkElement.href.endsWith(ext)
-    );
+    // Ignorar links com classes especificadas
+    if (ignoreClasses.some((className) => linkElement.classList.contains(className))) {
+      return false;
+    }
 
-    return (
-      !ignoreClasses.some((className) => linkElement.classList.contains(className)) &&
-      !ignoreProtocols.some((protocol) => linkElement.href.startsWith(protocol)) &&
-      !attributes.some((attribute) => dataItems.includes(linkElement.getAttribute(attribute))) &&
-      !isIgnoredFileType
-    );
+    // Ignorar links com protocolos específicos (mailto:, tel:, etc.)
+    const linkHref = linkElement.getAttribute("href") || "";
+    if (ignoreProtocols.some((protocol) => linkHref.startsWith(protocol))) {
+      return false;
+    }
+
+    // Ignorar links que terminam com extensões de arquivos especificadas
+    if (ignoreExtensions.some((ext) => linkHref.endsWith(ext))) {
+      return false;
+    }
+
+    // Ignorar links que possuem atributos específicos com valores em dataItems
+    for (const attribute of attributes) {
+      const attrValue = linkElement.getAttribute(attribute);
+      if (attrValue && dataItems.includes(attrValue)) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   /**
