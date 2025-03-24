@@ -1,7 +1,7 @@
 /**
  * Autor: Jonas Souza
  * Data de Criação: 17/08/2023
- * Última atualização: 01/11/2024
+ * Última atualização: 20/10/2025
  *
  * Implementação para manipulação de links do site e formulários de consulta
  * Esta implementação mantém alguns parâmetros de pesquisa
@@ -20,7 +20,7 @@ const config = {
   ignoreExtensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx"], //ignorar extensões de arquivo
   dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link
   attributes: ["role", "data-toggle", "data-bs-toggle"], //atributos específicos de link
-  siteParamsArray: ["s", "tipo", "categoria", "termo"], //remover os parametros de pesquisa
+  excludeParams: ["s", "tipo", "categoria", "termo"], //remover os parametros de pesquisa
 };
 
 document.addEventListener("DOMContentLoaded", function () {
@@ -138,10 +138,10 @@ document.addEventListener("DOMContentLoaded", function () {
    * @return {String}
    */
   function removeURLParams(search) {
-    const { siteParamsArray } = config;
+    const { excludeParams } = config;
     const urlParams = new URLSearchParams(search);
 
-    siteParamsArray.forEach((param) => {
+    excludeParams.forEach((param) => {
       urlParams.delete(param);
     });
 
@@ -186,7 +186,7 @@ document.addEventListener("DOMContentLoaded", function () {
   /**
    * Verifica se o formulário deve ser manipulado
    * Útil para aceitar alguns formulários de busca.
-   * @param {HTMLElement} formElement
+   * @param {HTMLFormElement} formElement
    * @return {bool}
    */
   function shouldHandleForm(formElement) {
@@ -194,6 +194,29 @@ document.addEventListener("DOMContentLoaded", function () {
     return acceptFormIds.some((acceptedFormId) =>
       formElement.id.includes(acceptedFormId)
     );
+  }
+
+  /**
+  * Adiciona parâmetros UTM ao formulário antes do envio.
+  * @param {HTMLFormElement} formElement
+  */
+  function addParamsToForm(formElement) {
+    const locationHash = window.location.hash;
+    let locationSearch = locationHash.includes("?")
+      ? "?" + locationHash.split("?")[1]
+      : window.location.search;
+
+    if (locationSearch) {
+      const urlParams = new URLSearchParams(removeURLParams(locationSearch));
+
+      for (const [key, value] of urlParams) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value;
+        formElement.appendChild(input);
+      }
+    }
   }
 
   /**
@@ -207,22 +230,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (shouldHandleForm(formElement)) {
       event.preventDefault();
 
-      const locationHash = window.location.hash;
-      let locationSearch = locationHash.includes("?")
-        ? "?" + locationHash.split("?")[1]
-        : window.location.search;
-
-      if (locationSearch) {
-        const urlParams = new URLSearchParams(removeURLParams(locationSearch));
-
-        for (const [key, value] of urlParams) {
-          const input = document.createElement("input");
-          input.type = "hidden";
-          input.name = key;
-          input.value = value;
-          formElement.appendChild(input);
-        }
-      }
+      addParamsToForm(formElement);
 
       // Desanexa o manipulador de evento de envio de formulário após o primeiro envio
       formElement.removeEventListener("submit", handleFormSubmit);
@@ -230,3 +238,6 @@ document.addEventListener("DOMContentLoaded", function () {
     }
   }
 });
+
+// Exporta as funções para serem usadas em outros scripts
+export { removeURLParams, addParamsToForm };
