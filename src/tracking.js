@@ -20,7 +20,7 @@ const config = {
   ignoreExtensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx"], //ignorar extensões de arquivo
   dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link
   attributes: ["role", "data-toggle", "data-bs-toggle"], //atributos específicos de link
-  excludeParams: ["s", "tipo", "categoria", "termo"], //remover os parametros de pesquisa
+  excludeParams: ["s", "tipo", "categoria", "termo", "paged"], //remover os parametros de pesquisa
 };
 
 /**
@@ -39,7 +39,9 @@ function shouldHandleLink(linkElement) {
   } = config;
 
   // Ignorar links com classes especificadas
-  if (ignoreClasses.some((className) => linkElement.classList.contains(className))) {
+  if (
+    ignoreClasses.some((className) => linkElement.classList.contains(className))
+  ) {
     return false;
   }
 
@@ -83,9 +85,16 @@ function handleLinkClick(event, linkElement) {
 
   if (
     acceptOrigins.some((acceptedOrigin) => origin.includes(acceptedOrigin)) &&
-    !ignorePathnames.some((ignoredPathname) => pathname.includes(ignoredPathname))
+    !ignorePathnames.some((ignoredPathname) =>
+      pathname.includes(ignoredPathname)
+    )
   ) {
-    const { href, isHashSymbolPresent } = generateHref(linkElement, origin, pathname, hash);
+    const { href, isHashSymbolPresent } = generateHref(
+      linkElement,
+      origin,
+      pathname,
+      hash
+    );
     handleLinkRedirect(event, isHashSymbolPresent, href, page, hash, target);
   }
 }
@@ -99,25 +108,32 @@ function handleLinkClick(event, linkElement) {
  * @return {Object} {href, isHashSymbolPresent}
  */
 function generateHref(linkElement, origin, pathname, hash) {
-  const locationHash = window.location.hash;
-  const locationSearch = window.location.search;
+  const { excludeParams } = config;
 
-  let href = origin + pathname;
-  let newSearch = "";
-  const isHashSymbolPresent = linkElement.href.includes("#");
+  // Parâmetros da URL atual
+  const currentParams = new URLSearchParams(window.location.search);
 
-  if (locationSearch) {
-    newSearch = removeURLParams(locationSearch);
-    href += newSearch + hash;
-  } else if (locationHash) {
-    const parseUrl = locationHash.split("?");
-    if (parseUrl[1]) {
-      newSearch = removeURLParams(parseUrl[1]);
-    }
-    href += isHashSymbolPresent ? newSearch + hash : newSearch;
-  } else {
-    href += hash;
+  // Parâmetros do link clicado
+  const linkUrl = new URL(linkElement.href);
+  const linkParams = new URLSearchParams(linkUrl.search);
+
+  // Merge: adiciona os do link ao currentParams (sem sobrescrever os existentes)
+  for (const [key, value] of linkParams.entries()) {
+    currentParams.set(key, value); // sobrescreve se já existir (mantém o do link)
   }
+
+  // Remove os parâmetros indesejados
+  excludeParams.forEach((param) => {
+    currentParams.delete(param);
+  });
+
+  // Monta o novo href
+  const newSearch = currentParams.toString()
+    ? "?" + currentParams.toString()
+    : "";
+  const isHashSymbolPresent = linkUrl.hash !== "";
+
+  const href = origin + pathname + newSearch + (hash || "");
 
   return { href, isHashSymbolPresent };
 }
@@ -140,15 +156,22 @@ function removeURLParams(search) {
 }
 
 /**
-* Redireciona o link para diferentes cenários
-* @param {Event} event
-* @param {bool} isHashSymbolPresent
-* @param {String} href
-* @param {String} page
-* @param {String} hash
-* @param {String} target
-*/
-function handleLinkRedirect(event, isHashSymbolPresent, href, page, hash, target) {
+ * Redireciona o link para diferentes cenários
+ * @param {Event} event
+ * @param {bool} isHashSymbolPresent
+ * @param {String} href
+ * @param {String} page
+ * @param {String} hash
+ * @param {String} target
+ */
+function handleLinkRedirect(
+  event,
+  isHashSymbolPresent,
+  href,
+  page,
+  hash,
+  target
+) {
   event.preventDefault();
 
   const locationPage = window.location.origin + window.location.pathname;
@@ -158,7 +181,9 @@ function handleLinkRedirect(event, isHashSymbolPresent, href, page, hash, target
     return;
   }
 
-  target === "_blank" ? window.open(href, "_blank") : (window.location.href = href);
+  target === "_blank"
+    ? window.open(href, "_blank")
+    : (window.location.href = href);
 }
 
 /**
@@ -175,9 +200,9 @@ function shouldHandleForm(formElement) {
 }
 
 /**
-* Adiciona parâmetros UTM ao formulário antes do envio.
-* @param {HTMLFormElement} formElement
-*/
+ * Adiciona parâmetros UTM ao formulário antes do envio.
+ * @param {HTMLFormElement} formElement
+ */
 function addParamsToForm(formElement) {
   const locationHash = window.location.hash;
   let locationSearch = locationHash.includes("?")
@@ -218,7 +243,6 @@ function handleFormSubmit(event) {
 
 // Inicialização
 document.addEventListener("DOMContentLoaded", function () {
-
   // Manipulação de links
   document.addEventListener("click", function (event) {
     const linkElement = event.target.closest("a");
