@@ -15,7 +15,7 @@ const config = {
   acceptOrigins: ["www.domain.com", "sub.domain.com"], //manipular links nas origens aceitas
   acceptFormIds: ["searchForm"], //levar o rastreamento para os formulários aceitos
   ignorePathnames: ["/wp-admin/"], //ignorar o rastreamento em pathnames específicos
-  ignoreClasses: ["linkassiste", "filter-button", "page-numbers", "load-more"], //ignorar os links que contém as classes
+  ignoreClasses: ["linkassiste", "filter-button", "page-numbers", "load-more", "glink", "nturl"], //ignorar os links que contém as classes
   ignoreProtocols: ["mailto:", "tel:"], //ignorar os links que contém os protocolos
   ignoreExtensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx"], //ignorar extensões de arquivo
   dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link
