@@ -12,7 +12,7 @@
 
 // Configuração global
 const config = {
-  acceptOrigins: ["www.domain.com", "sub.domain.com"], //manipular links nas origens aceitas
+  acceptOrigins: ["domain.com"], //manipular links nas origens aceitas
   acceptFormIds: ["searchForm"], //levar o rastreamento para os formulários aceitos
   ignorePathnames: ["/wp-admin/"], //ignorar o rastreamento em pathnames específicos
   ignoreClasses: ["linkassiste", "filter-button", "page-numbers", "load-more", "glink", "nturl"], //ignorar os links que contém as classes
@@ -68,6 +68,32 @@ function shouldHandleLink(linkElement) {
 }
 
 /**
+ * Função auxiliar para verificar se a origem é aceita
+ * Aceita tanto o domínio principal quanto subdomínios (*.domain.com)
+ * @param {String} origin
+ * @return {bool}
+ */
+function isAcceptedOrigin(origin) {
+  try {
+    const { hostname } = new URL(origin);
+
+    return config.acceptOrigins.some((baseDomain) => {
+      // Normaliza o domínio base (remove espaços e converte para minúsculo)
+      const cleanDomain = baseDomain.trim().toLowerCase();
+
+      // Aceita se o hostname for igual ao domínio base
+      if (hostname === cleanDomain) return true;
+
+      // Aceita se o hostname terminar com ".dominioBase"
+      return hostname.endsWith(`.${cleanDomain}`);
+    });
+  } catch (error) {
+    console.warn("URL inválida em isAcceptedOrigin:", origin, error);
+    return false;
+  }
+}
+
+/**
  * Função para manipular o clique em links.
  * Útil para verificar o link do elemento é para a origen do site,
  * chamar funções com responsabilidades específicas e redirecionar o link
@@ -81,13 +107,11 @@ function handleLinkClick(event, linkElement) {
   const hash = linkElement.hash;
   const page = origin + pathname;
 
-  const { acceptOrigins, ignorePathnames } = config;
+  const { ignorePathnames } = config;
 
   if (
-    acceptOrigins.some((acceptedOrigin) => origin.includes(acceptedOrigin)) &&
-    !ignorePathnames.some((ignoredPathname) =>
-      pathname.includes(ignoredPathname)
-    )
+    isAcceptedOrigin(origin) &&
+    !ignorePathnames.some((ignoredPathname) => pathname.includes(ignoredPathname))
   ) {
     const { href, isHashSymbolPresent } = generateHref(
       linkElement,
