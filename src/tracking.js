@@ -124,40 +124,60 @@ function handleLinkClick(event, linkElement) {
 }
 
 /**
- * Gera o href considerando diferentes cenários
+ * Gera o href considerando diferentes cenários:
+ * - Mantém UTMs da URL atual se já existirem
+ * - Usa UTMs do link apenas se a URL atual não as tiver
+ * - Remove parâmetros indesejados definidos em config.excludeParams
+ *
  * @param {HTMLElement} linkElement
  * @param {String} origin
  * @param {String} pathname
  * @param {String} hash
- * @return {Object} {href, isHashSymbolPresent}
+ * @return {Object} { href, isHashSymbolPresent }
  */
 function generateHref(linkElement, origin, pathname, hash) {
   const { excludeParams } = config;
 
-  // Parâmetros da URL atual
+  // Parâmetros atuais (URL em que o usuário está)
   const currentParams = new URLSearchParams(window.location.search);
 
   // Parâmetros do link clicado
   const linkUrl = new URL(linkElement.href);
   const linkParams = new URLSearchParams(linkUrl.search);
 
-  // Merge: adiciona os do link ao currentParams (sem sobrescrever os existentes)
+  // Define UTMs conhecidas (podem ser ampliadas)
+  const utmKeys = [
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+    "utm_id",
+    "utm_term",
+    "utm_content",
+  ];
+
+  // Faz o merge preservando as UTMs atuais
   for (const [key, value] of linkParams.entries()) {
-    currentParams.set(key, value); // sobrescreve se já existir (mantém o do link)
+    const isUTM = utmKeys.includes(key.toLowerCase());
+
+    // Caso já exista no currentParams e for UTM → mantém o valor atual
+    if (isUTM && currentParams.has(key)) continue;
+
+    // Caso contrário → adiciona ou sobrescreve
+    currentParams.set(key, value);
   }
 
-  // Remove os parâmetros indesejados
+  // Remove parâmetros indesejados
   excludeParams.forEach((param) => {
     currentParams.delete(param);
   });
 
-  // Monta o novo href
+  // Reconstrói a query string
   const newSearch = currentParams.toString()
     ? "?" + currentParams.toString()
     : "";
-  const isHashSymbolPresent = linkUrl.hash !== "";
 
-  const href = origin + pathname + newSearch + (hash || "");
+  const isHashSymbolPresent = !!hash;
+  const href = origin + pathname + newSearch + hash;
 
   return { href, isHashSymbolPresent };
 }
