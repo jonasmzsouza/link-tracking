@@ -1,7 +1,7 @@
 /**
  * Autor: Jonas Souza
  * Data de Criação: 17/08/2023
- * Última atualização: 20/10/2025
+ * Última atualização: 22/10/2025
  *
  * Implementação para manipulação de links do site e formulários de consulta
  * Esta implementação mantém alguns parâmetros de pesquisa
@@ -124,79 +124,127 @@ function handleLinkClick(event, linkElement) {
 }
 
 /**
- * Gera o href considerando diferentes cenários:
- * - Mantém UTMs da URL atual se já existirem
- * - Usa UTMs do link apenas se a URL atual não as tiver
- * - Remove parâmetros indesejados definidos em config.excludeParams
+ * Normaliza uma query string possivelmente malformada que pode conter
+ * "??", params embutidos em valores (ex: custom=example?utm_source=example) ou %3F.
+ * Retorna um URLSearchParams com todos os pares corretamente extraídos.
+ * @param {string} rawQuery - ex: "?custom=example?utm_source=example&utm_medium=example"
+ * @returns {URLSearchParams}
+ */
+function normalizeQueryString(rawQuery) {
+  // remove prefixos ? ou &
+  let remaining = (rawQuery || "").replace(/^[\?&]+/, "");
+
+  const result = new URLSearchParams();
+
+  while (remaining) {
+    // Se houver um '?' dentro da string, separamos a primeira parte (antes do '?')
+    // e o restante (após), que pode ser outra query. Usamos split com limit 2.
+    const [firstPart, rest] = remaining.split(/\?(.+)/s); // quebra na primeira '?'
+    // Parseia a primeira parte normalmente (pode conter vários &)
+    const firstParams = new URLSearchParams(firstPart);
+    for (const [k, v] of firstParams) {
+      result.append(k, v);
+    }
+    if (!rest) break; // nada mais para processar
+    // Agora "rest" é o restante após o '?', pode começar com utm_source=...
+    // Preparamos next round para analisar o restante como nova query
+    // Se rest contém novo '?', o loop continuará.
+    remaining = rest;
+  }
+
+  // Se original não tinha '?', o while acima executou apenas uma vez e já retornou tudo.
+
+  // Tratamento extra: também decodifica valores que contenham %3F codificado
+  // e tenta separar nesses casos. Ex: custom=example%3Futm_source%3Dteste
+  // Vamos procurar valores que contenham %3F e dividir.
+  const entries = Array.from(result.entries());
+  for (const [k, v] of entries) {
+    if (v.includes("%3F") || v.includes("%3f")) {
+      const decoded = decodeURIComponent(v);
+      if (decoded.includes("?")) {
+        const [valBefore, valAfter] = decoded.split(/\?(.+)/s);
+        // atualiza o valor do parâmetro original (mantém o primeiro segmento)
+        result.set(k, valBefore);
+        // adiciona os parâmetros restantes
+        const tailParams = new URLSearchParams(valAfter);
+        for (const [tk, tv] of tailParams) {
+          // append - pois pode haver múltiplos valores
+          if (!result.has(tk)) result.append(tk, tv);
+        }
+      }
+    }
+  }
+
+  return result;
+}
+
+/**
+ * Faz merge seguro entre parâmetros da página atual e do link,
+ * preservando UTMs da página quando existirem e normalizando queries malformadas.
  *
+ * @param {string} baseUrl - ex: 'https://domain.com/page'
+ * @param {string} rawLinkQuery - ex: linkUrl.search (pode ser malformada)
+ * @param {string} rawCurrentQuery - ex: window.location.search
+ * @param {Array<string>} excludeParams - lista de params a remover
+ * @returns {string} URL final (baseUrl + '?' + mergedParams) ou baseUrl se vazio
+ */
+function sanitizeAndMergeParams(baseUrl, rawLinkQuery = "", rawCurrentQuery = "", excludeParams = []) {
+  try {
+    // Normaliza queries malformadas
+    const linkSearch = normalizeQueryString(rawLinkQuery);
+    const currentSearch = new URLSearchParams((rawCurrentQuery || "").replace(/^[\?&]+/, ""));
+
+    // UTMs que queremos preservar da página atual, se existirem
+    const utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_id", "utm_term", "utm_content"];
+
+    // Primeiro, adiciona os parâmetros do link à currentSearch,
+    // mas NÃO sobrescreve UTMs que já existam em currentSearch.
+    for (const [key, value] of linkSearch.entries()) {
+      const keyLower = key.toLowerCase();
+      const isUtm = utmKeys.includes(keyLower);
+      if (isUtm && currentSearch.has(key)) {
+        // preserva currentSearch (não sobrescreve)
+        continue;
+      }
+      // caso contrário, set (sobrescreve ou adiciona)
+      currentSearch.set(key, value);
+    }
+
+    // Remove parâmetros indesejados
+    excludeParams.forEach((p) => currentSearch.delete(p));
+
+    const finalQuery = currentSearch.toString();
+    return finalQuery ? `${baseUrl}?${finalQuery}` : baseUrl;
+  } catch (err) {
+    console.error("[sanitizeAndMergeParams] erro:", err);
+    return baseUrl;
+  }
+}
+
+/**
+ * Atualiza generateHref para usar sanitizeAndMergeParams,
+ * preservando o hash (#) corretamente.
  * @param {HTMLElement} linkElement
  * @param {String} origin
  * @param {String} pathname
  * @param {String} hash
- * @return {Object} { href, isHashSymbolPresent }
+ * @return {Object} { href: String, isHashSymbolPresent: bool }
  */
 function generateHref(linkElement, origin, pathname, hash) {
   const { excludeParams } = config;
 
-  // Parâmetros atuais (URL em que o usuário está)
-  const currentParams = new URLSearchParams(window.location.search);
-
-  // Parâmetros do link clicado
+  const baseUrl = origin + pathname;
   const linkUrl = new URL(linkElement.href);
-  const linkParams = new URLSearchParams(linkUrl.search);
+  const linkQuery = linkUrl.search; // pode ser malformada (ex: ?custom=example?utm_source=...)
+  const currentQuery = window.location.search;
 
-  // Define UTMs conhecidas (podem ser ampliadas)
-  const utmKeys = [
-    "utm_source",
-    "utm_medium",
-    "utm_campaign",
-    "utm_id",
-    "utm_term",
-    "utm_content",
-  ];
+  const merged = sanitizeAndMergeParams(baseUrl, linkQuery, currentQuery, excludeParams);
 
-  // Faz o merge preservando as UTMs atuais
-  for (const [key, value] of linkParams.entries()) {
-    const isUTM = utmKeys.includes(key.toLowerCase());
+  // Garante que o hash seja mantido (se existir)
+  const hasHash = !!hash;
+  const finalHref = merged + (hasHash ? hash : "");
 
-    // Caso já exista no currentParams e for UTM → mantém o valor atual
-    if (isUTM && currentParams.has(key)) continue;
-
-    // Caso contrário → adiciona ou sobrescreve
-    currentParams.set(key, value);
-  }
-
-  // Remove parâmetros indesejados
-  excludeParams.forEach((param) => {
-    currentParams.delete(param);
-  });
-
-  // Reconstrói a query string
-  const newSearch = currentParams.toString()
-    ? "?" + currentParams.toString()
-    : "";
-
-  const isHashSymbolPresent = !!hash;
-  const href = origin + pathname + newSearch + hash;
-
-  return { href, isHashSymbolPresent };
-}
-
-/**
- * Remove parâmetros de busca da URL
- * Útil navegação pós pesquisa no site
- * @param {String} search
- * @return {String}
- */
-function removeURLParams(search) {
-  const { excludeParams } = config;
-  const urlParams = new URLSearchParams(search);
-
-  excludeParams.forEach((param) => {
-    urlParams.delete(param);
-  });
-
-  return urlParams.toString() ? "?" + urlParams.toString() : "";
+  return { href: finalHref, isHashSymbolPresent: hasHash };
 }
 
 /**
@@ -244,6 +292,23 @@ function shouldHandleForm(formElement) {
 }
 
 /**
+ * Remove parâmetros de busca da URL
+ * Útil navegação pós pesquisa no site
+ * @param {String} search
+ * @return {String}
+ */
+function removeURLParams(search) {
+  const { excludeParams } = config;
+  const urlParams = new URLSearchParams(search);
+
+  excludeParams.forEach((param) => {
+    urlParams.delete(param);
+  });
+
+  return urlParams.toString() ? "?" + urlParams.toString() : "";
+}
+
+/**
  * Adiciona parâmetros UTM ao formulário antes do envio.
  * @param {HTMLFormElement} formElement
  */
@@ -287,6 +352,30 @@ function handleFormSubmit(event) {
 
 // Inicialização
 document.addEventListener("DOMContentLoaded", function () {
+  // Corrige links malformados no HTML após o carregamento (camada de segurança extra)
+  document.querySelectorAll("a[href]").forEach((link) => {
+    if (!shouldHandleLink(link)) return;
+
+    const url = new URL(link.href);
+
+    // Mantém o hash original
+    const hash = url.hash || "";
+
+    const sanitized = sanitizeAndMergeParams(
+      url.origin + url.pathname,
+      url.search,
+      "",
+      config.excludeParams
+    );
+
+    // Reanexa o hash, se existir
+    const sanitizedWithHash = sanitized + hash;
+
+    if (sanitizedWithHash !== link.href) {
+      link.href = sanitizedWithHash;
+    }
+  });
+
   // Manipulação de links
   document.addEventListener("click", function (event) {
     const linkElement = event.target.closest("a");
