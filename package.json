@@ -1,0 +1,39 @@
+{
+  "name": "link-tracking",
+  "version": "1.0.0",
+  "description": "Script for manipulating links and forms, preserving UTM parameters and clearing irrelevant search parameters.",
+  "main": "dist/tracking.min.js",
+  "type": "module",
+  "scripts": {
+    "lint": "eslint src/",
+    "lint:fix": "eslint src/ --fix",
+    "build": "esbuild src/tracking.js --bundle --minify --outfile=dist/tracking.min.js",
+    "watch": "esbuild src/tracking.js --bundle --watch --outfile=dist/tracking.min.js",
+    "test": "echo 'No tests configured yet.'"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jonasmzsouza/link-tracking.git"
+  },
+  "keywords": [
+    "utm",
+    "tracking",
+    "link-cleaner",
+    "url-utils",
+    "javascript",
+    "frontend",
+    "seo",
+    "no-jquery"
+  ],
+  "author": {
+    "name": "Jonas Souza",
+    "email": "jonasmzsouza@gmail.com"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "esbuild": "^0.25.11",
+    "eslint": "9.38.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-import": "^2.32.0"
+  }
+}

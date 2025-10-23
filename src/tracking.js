@@ -132,7 +132,7 @@ function handleLinkClick(event, linkElement) {
  */
 function normalizeQueryString(rawQuery) {
   // remove prefixos ? ou &
-  let remaining = (rawQuery || "").replace(/^[\?&]+/, "");
+  let remaining = (rawQuery || "").replace(/^[?&]+/, "");
 
   const result = new URLSearchParams();
 
@@ -192,7 +192,7 @@ function sanitizeAndMergeParams(baseUrl, rawLinkQuery = "", rawCurrentQuery = ""
   try {
     // Normaliza queries malformadas
     const linkSearch = normalizeQueryString(rawLinkQuery);
-    const currentSearch = new URLSearchParams((rawCurrentQuery || "").replace(/^[\?&]+/, ""));
+    const currentSearch = new URLSearchParams((rawCurrentQuery || "").replace(/^[?&]+/, ""));
 
     // UTMs que queremos preservar da página atual, se existirem
     const utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_id", "utm_term", "utm_content"];
@@ -314,7 +314,7 @@ function removeURLParams(search) {
  */
 function addParamsToForm(formElement) {
   const locationHash = window.location.hash;
-  let locationSearch = locationHash.includes("?")
+  const locationSearch = locationHash.includes("?")
     ? "?" + locationHash.split("?")[1]
     : window.location.search;
 
