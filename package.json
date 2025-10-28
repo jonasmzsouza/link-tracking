@@ -1,19 +1,19 @@
 {
   "name": "param-tracker",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Script for manipulating links and forms, preserving UTM parameters and clearing irrelevant search parameters.",
   "main": "dist/tracker.min.js",
   "type": "module",
   "scripts": {
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "build": "esbuild src/tracker.js --bundle --minify --outfile=dist/tracker.min.js",
+    "build": "node -e \"const esbuild=require('esbuild');const pkg=require('./package.json');esbuild.buildSync({entryPoints:['src/tracker.js'],bundle:true,minify:true,outfile:'dist/tracker.min.js',banner:{js:'/*! ' + pkg.name + ' v' + pkg.version + ' | ' + (pkg.repository?.url || '') + ' */'}})\"",
     "watch": "esbuild src/tracker.js --bundle --watch --outfile=dist/tracker.min.js",
     "test": "echo 'No tests configured yet.'"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/jonasmzsouza/param-tracker.git"
+    "url": "https://github.com/jonasmzsouza/param-tracker"
   },
   "keywords": [
     "utm",

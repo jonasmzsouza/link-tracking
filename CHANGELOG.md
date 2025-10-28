@@ -5,6 +5,12 @@ The format follows the conventions of Conventional Commits(https://www.conventio
 
 ---
 
+## 🐞 2.0.1
+### 🐛 Fixes
+- Avoids duplication of parameters by the addParamsToForm function if a field with the same name and value already exists in the form.
+
+---
+
 ## 🚀 2.0.0
 
 ### 💥 Breaking Changes
