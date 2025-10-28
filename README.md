@@ -63,7 +63,7 @@ import ParamTracker from "./tracker.js";
 
 The tracker now handles:
 - All links within the accepted origins
-- Form submissions with accepted form IDs
+- Adds parameters to accepted forms.
 - URL parameter propagation and sanitization
 - Event binding for clicks and anchor/hash navigation
 

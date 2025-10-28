@@ -7,7 +7,7 @@
   "scripts": {
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "build": "esbuild src/tracker.js --bundle --minify --outfile=dist/tracker.min.js",
+    "build": "node -e \"const esbuild=require('esbuild');const pkg=require('./package.json');esbuild.buildSync({entryPoints:['src/tracker.js'],bundle:true,minify:true,outfile:'dist/tracker.min.js',banner:{js:'/*! ' + pkg.name + ' v' + pkg.version + ' | ' + (pkg.repository?.url || '') + ' */'}})\"",
     "watch": "esbuild src/tracker.js --bundle --watch --outfile=dist/tracker.min.js",
     "test": "echo 'No tests configured yet.'"
   },
