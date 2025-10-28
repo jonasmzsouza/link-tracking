@@ -1,389 +1,401 @@
 /**
- * Autor: Jonas Souza
- * Data de Criação: 17/08/2023
- * Última atualização: 22/10/2025
- *
- * Implementação para manipulação de links do site e formulários de consulta
- * Esta implementação mantém alguns parâmetros de pesquisa
- * que são de origem de anúncios para fins de rastreamento
- * e remove outros parâmetros de pesquisa que são de
- * origem de páginas de pesquisa do site.
+ * Modular class for tracking and manipulating links and forms.
+ * Compatible with WordPress and projects that use ES6 modules.
  */
+export class Tracking {
+  /**
+   * @param {Object} customConfig - Custom client configuration
+   */
+  constructor(customConfig = {}) {
+    const defaults = {
+      acceptOrigins: [], // mandatory ["domain.com"]
+      acceptFormIds: [], //track accepted forms
+      ignorePathnames: [], //ignore tracker in specific pathnames
+      ignoreClasses: [], //ignore links containing the classes
+      ignoreProtocols: ["mailto:", "tel:"], //ignore links containing protocols
+      dataItems: [], //ignore links containing data values in specific link attributes
+      attributes: [], //specific link attributes
+      includeParams: ["utm_source", "utm_medium", "utm_campaign", "utm_id", "utm_term", "utm_content"],
+      excludeParams: [], //remove search or filter parameters
+    };
 
-// Configuração global
-const config = {
-  acceptOrigins: ["domain.com"], //manipular links nas origens aceitas
-  acceptFormIds: ["searchForm"], //levar o rastreamento para os formulários aceitos
-  ignorePathnames: ["/wp-admin/"], //ignorar o rastreamento em pathnames específicos
-  ignoreClasses: ["linkassiste", "filter-button", "page-numbers", "load-more", "glink", "nturl"], //ignorar os links que contém as classes
-  ignoreProtocols: ["mailto:", "tel:"], //ignorar os links que contém os protocolos
-  ignoreExtensions: [".pdf", ".doc", ".docx", ".xls", ".xlsx"], //ignorar extensões de arquivo
-  dataItems: ["button", "dropdown", "tab", "modal"], ///ignorar os links que contém os valores data em atributos específicos de link
-  attributes: ["role", "data-toggle", "data-bs-toggle"], //atributos específicos de link
-  excludeParams: ["s", "tipo", "categoria", "termo", "paged"], //remover os parametros de pesquisa
-};
+    if (!customConfig.acceptOrigins || customConfig.acceptOrigins.length === 0) {
+      throw new Error(
+        "Tracking: The 'acceptOrigins' property is mandatory in the configuration."
+      );
+    }
 
-/**
- * Função para verificar se um link deve ser manipulado
- * Útil para ignorar alguns tipos de link.
- * @param {HTMLElement} linkElement
- * @return {bool}
- */
-function shouldHandleLink(linkElement) {
-  const {
-    ignoreClasses,
-    ignoreProtocols,
-    ignoreExtensions,
-    dataItems,
-    attributes,
-  } = config;
+    // Merges and concatenates configurable arrays
+    this.config = {
+      ...defaults,
+      ...customConfig,
+      acceptOrigins: this.sanitizeStringArray(customConfig.acceptOrigins),
+      acceptFormIds: this.sanitizeStringArray(customConfig.acceptFormIds || []),
+      ignorePathnames: this.mergeUnique(defaults.ignorePathnames, customConfig.ignorePathnames),
+      ignoreClasses: this.mergeUnique(defaults.ignoreClasses, customConfig.ignoreClasses),
+      ignoreProtocols: this.mergeUnique(defaults.ignoreProtocols, customConfig.ignoreProtocols),
+      dataItems: this.mergeUnique(defaults.dataItems, customConfig.dataItems),
+      attributes: this.mergeUnique(defaults.attributes, customConfig.attributes),
+      excludeParams: this.mergeUnique(defaults.excludeParams, customConfig.excludeParams),
+    };
 
-  // Ignorar links com classes especificadas
-  if (
-    ignoreClasses.some((className) => linkElement.classList.contains(className))
-  ) {
-    return false;
+    // Starts automatically on DOM ready
+    document.addEventListener("DOMContentLoaded", () => this.init());
   }
 
-  // Ignorar links com protocolos específicos (mailto:, tel:, etc.)
-  const linkHref = linkElement.getAttribute("href") || "";
-  if (ignoreProtocols.some((protocol) => linkHref.startsWith(protocol))) {
-    return false;
-  }
+  /**
+   * Initializes the tracking module
+   * @returns {void}
+   */
+  init = () => {
+    this.sanitizeLinks();
+    this.bindLinkEvents();
+    this.bindButtonEvents();
+    this.restoreScrollHash();
+  };
 
-  // Ignorar links que terminam com extensões de arquivos especificadas
-  if (ignoreExtensions.some((ext) => linkHref.endsWith(ext))) {
-    return false;
-  }
+  /**
+   * Ensures an array contains only unique, non-empty strings.
+   * Removes invalid entries such as objects, numbers, null, undefined.
+   * @param {Array<any>} arr
+   * @returns {Array<string>}
+   */
+  sanitizeStringArray = (arr = []) => {
+    if (!Array.isArray(arr)) return [];
+    return [...new Set(
+      arr
+        .filter((item) => typeof item === "string" && item.trim() !== "")
+        .map((item) => item.trim())
+    )];
+  };
 
-  // Ignorar links que possuem atributos específicos com valores em dataItems
-  for (const attribute of attributes) {
-    const attrValue = linkElement.getAttribute(attribute);
-    if (attrValue && dataItems.includes(attrValue)) {
+  /**
+   * Merges two arrays and sanitizes the result to unique, non-empty strings.
+   * @param {Array<string>} defaultArr
+   * @param {Array<string>} customArr
+   * @returns {Array<string>}
+   */
+  mergeUnique = (defaultArr = [], customArr = []) => {
+    return this.sanitizeStringArray([...defaultArr, ...customArr]);
+  };
+
+  /**
+   * Sanitizes existing links in the HTML
+   * @returns {void}
+   */
+  sanitizeLinks = () => {
+    document.querySelectorAll("a[href]").forEach((link) => {
+      if (!this.shouldHandleLink(link)) return;
+
+      const url = new URL(link.href);
+      const hash = url.hash || "";
+
+      const sanitized = this.sanitizeAndMergeParams(
+        url.origin + url.pathname,
+        url.search,
+        "",
+        this.config.excludeParams
+      );
+
+      const finalHref = sanitized + hash;
+
+      if (finalHref !== link.href) link.href = finalHref;
+    });
+  };
+
+  /**
+   * Check if the URL is a file
+   * @param {*} url 
+   * @return {bool}
+   */
+  isFileUrl = (url) => {
+    const regex = /\.(pdf|docx?|xlsx?|pptx?|zip|rar|mp3|mp4|avi|wmv|mov|txt|csv|jpe?g|png|gif|svg|webp)(\?.*)?$/i;
+    try {
+      const { pathname, search, hash } = new URL(url);
+      const fullPath = pathname + search + hash;
+      return regex.test(fullPath);
+    } catch {
       return false;
     }
   }
 
-  return true;
-}
+  /**
+   * Check whether the link should be manipulated
+   * @param {HTMLElement} linkElement
+   * @return {bool}
+   */
+  shouldHandleLink = (linkElement) => {
+    const {
+      ignoreClasses,
+      ignoreProtocols,
+      dataItems,
+      attributes,
+    } = this.config;
 
-/**
- * Função auxiliar para verificar se a origem é aceita
- * Aceita tanto o domínio principal quanto subdomínios (*.domain.com)
- * @param {String} origin
- * @return {bool}
- */
-function isAcceptedOrigin(origin) {
-  try {
-    const { hostname } = new URL(origin);
+    const linkHref = linkElement.getAttribute("href") || "";
 
-    return config.acceptOrigins.some((baseDomain) => {
-      // Normaliza o domínio base (remove espaços e converte para minúsculo)
-      const cleanDomain = baseDomain.trim().toLowerCase();
+    // Ignore links with specified classes
+    if (ignoreClasses.some((cls) => linkElement.classList.contains(cls)))
+      return false;
 
-      // Aceita se o hostname for igual ao domínio base
-      if (hostname === cleanDomain) return true;
+    // Ignore links with specific protocols (mailto:, tel:, etc.)
+    if (ignoreProtocols.some((p) => linkHref.startsWith(p))) return false;
 
-      // Aceita se o hostname terminar com ".dominioBase"
-      return hostname.endsWith(`.${cleanDomain}`);
-    });
-  } catch (error) {
-    console.warn("URL inválida em isAcceptedOrigin:", origin, error);
-    return false;
-  }
-}
+    // Ignore file links
+    if (isFileUrl(linkHref)) return false;
 
-/**
- * Função para manipular o clique em links.
- * Útil para verificar o link do elemento é para a origen do site,
- * chamar funções com responsabilidades específicas e redirecionar o link
- * @param {Event} event
- * @param {HTMLElement} linkElement
- */
-function handleLinkClick(event, linkElement) {
-  const origin = linkElement.origin;
-  const pathname = linkElement.pathname;
-  const target = linkElement.getAttribute("target");
-  const hash = linkElement.hash;
-  const page = origin + pathname;
-
-  const { ignorePathnames } = config;
-
-  if (
-    isAcceptedOrigin(origin) &&
-    !ignorePathnames.some((ignoredPathname) => pathname.includes(ignoredPathname))
-  ) {
-    const { href, isHashSymbolPresent } = generateHref(
-      linkElement,
-      origin,
-      pathname,
-      hash
-    );
-    handleLinkRedirect(event, isHashSymbolPresent, href, page, hash, target);
-  }
-}
-
-/**
- * Normaliza uma query string possivelmente malformada que pode conter
- * "??", params embutidos em valores (ex: custom=example?utm_source=example) ou %3F.
- * Retorna um URLSearchParams com todos os pares corretamente extraídos.
- * @param {string} rawQuery - ex: "?custom=example?utm_source=example&utm_medium=example"
- * @returns {URLSearchParams}
- */
-function normalizeQueryString(rawQuery) {
-  // remove prefixos ? ou &
-  let remaining = (rawQuery || "").replace(/^[?&]+/, "");
-
-  const result = new URLSearchParams();
-
-  while (remaining) {
-    // Se houver um '?' dentro da string, separamos a primeira parte (antes do '?')
-    // e o restante (após), que pode ser outra query. Usamos split com limit 2.
-    const [firstPart, rest] = remaining.split(/\?(.+)/s); // quebra na primeira '?'
-    // Parseia a primeira parte normalmente (pode conter vários &)
-    const firstParams = new URLSearchParams(firstPart);
-    for (const [k, v] of firstParams) {
-      result.append(k, v);
+    // Ignore links that have specific attributes with values in dataItems
+    for (const attr of attributes) {
+      const val = linkElement.getAttribute(attr);
+      if (val && dataItems.includes(val)) return false;
     }
-    if (!rest) break; // nada mais para processar
-    // Agora "rest" é o restante após o '?', pode começar com utm_source=...
-    // Preparamos next round para analisar o restante como nova query
-    // Se rest contém novo '?', o loop continuará.
-    remaining = rest;
-  }
 
-  // Se original não tinha '?', o while acima executou apenas uma vez e já retornou tudo.
+    return true;
+  };
 
-  // Tratamento extra: também decodifica valores que contenham %3F codificado
-  // e tenta separar nesses casos. Ex: custom=example%3Futm_source%3Dteste
-  // Vamos procurar valores que contenham %3F e dividir.
-  const entries = Array.from(result.entries());
-  for (const [k, v] of entries) {
-    if (v.includes("%3F") || v.includes("%3f")) {
-      const decoded = decodeURIComponent(v);
-      if (decoded.includes("?")) {
-        const [valBefore, valAfter] = decoded.split(/\?(.+)/s);
-        // atualiza o valor do parâmetro original (mantém o primeiro segmento)
-        result.set(k, valBefore);
-        // adiciona os parâmetros restantes
-        const tailParams = new URLSearchParams(valAfter);
-        for (const [tk, tv] of tailParams) {
-          // append - pois pode haver múltiplos valores
-          if (!result.has(tk)) result.append(tk, tv);
+  /**
+   * Verify that the origin is accepted
+   * Accepts both the main domain and subdomains (*.domain.com)
+   * @param {String} origin 
+   * @returns {bool}
+   */
+  isAcceptedOrigin = (origin) => {
+    try {
+      const { hostname } = new URL(origin);
+      return this.config.acceptOrigins.some((baseDomain) => {
+        const cleanDomain = baseDomain.trim().toLowerCase();
+        return (
+          hostname === cleanDomain || hostname.endsWith(`.${cleanDomain}`)
+        );
+      });
+    } catch {
+      return false;
+    }
+  };
+
+  /**
+   * Handle clicks on links.
+   * Useful for checking whether the element's link is to the source website.
+   * Call functions with specific responsibilities and redirect the link.
+   * @param {Event} event 
+   * @param {HTMLElement} linkElement 
+   */
+  handleLinkClick = (event, linkElement) => {
+    const origin = linkElement.origin;
+    const pathname = linkElement.pathname;
+    const target = linkElement.getAttribute("target");
+    const hash = linkElement.hash;
+    const page = origin + pathname;
+
+    if (
+      this.isAcceptedOrigin(origin) &&
+      !this.config.ignorePathnames.some((p) => pathname.includes(p))
+    ) {
+      const { href, isHashSymbolPresent } = this.generateHref(
+        linkElement,
+        origin,
+        pathname,
+        hash
+      );
+      this.handleLinkRedirect(event, isHashSymbolPresent, href, page, hash, target);
+    }
+  };
+
+  /**
+   * Performs a safe merge between the current page and link parameters,
+   * preserving page UTMs when they exist and normalizing malformed queries.
+   *
+   * @param {string} baseUrl - e.g., ‘https://domain.com/page’
+   * @param {string} rawLinkQuery - e.g., linkUrl.search (may be malformed)
+   * @param {string} rawCurrentQuery - e.g.: window.location.search
+   * @param {Array<string>} excludeParams - list of parameters to remove
+   * @returns {string} final URL (baseUrl + ‘?’ + mergedParams) or baseUrl if empty
+   */
+  sanitizeAndMergeParams = (baseUrl, rawLinkQuery = "", rawCurrentQuery = "", excludeParams = []) => {
+    try {
+      const linkSearch = this.normalizeQueryString(rawLinkQuery);
+      const currentSearch = new URLSearchParams(
+        (rawCurrentQuery || "").replace(/^[?&]+/, "")
+      );
+
+      // First, add the link parameters to currentSearch,
+      // but DO NOT overwrite UTMs that already exist in currentSearch.
+      for (const [key, value] of linkSearch.entries()) {
+        const lowerKey = key.toLowerCase();
+        const isUtm = this.config.includeParams.includes(lowerKey);
+        if (isUtm && currentSearch.has(key)) continue; // preserves currentSearch (does not overwrite)
+        currentSearch.set(key, value); // otherwise, set (overwrites or adds)
+      }
+
+      // Remove unwanted parameters
+      excludeParams.forEach((p) => currentSearch.delete(p));
+
+      const finalQuery = currentSearch.toString();
+      return finalQuery ? `${baseUrl}?${finalQuery}` : baseUrl;
+    } catch (err) {
+      console.error("[sanitizeAndMergeParams] erro:", err);
+      return baseUrl;
+    }
+  };
+
+  /**
+   * Normalizes a potentially malformed query string that may contain
+   * “??” or “&&”, params embedded in values (e.g., custom=example?utm_source=example), or %3F.
+   * Returns a URLSearchParams with all pairs correctly extracted.
+   * @param {string} rawQuery - e.g., “?custom=example?utm_source=example&utm_medium=example”
+   * @returns {URLSearchParams}
+   */
+  normalizeQueryString = (rawQuery) => {
+    let remaining = (rawQuery || "").replace(/^[?&]+/, "");
+    const result = new URLSearchParams();
+
+    while (remaining) {
+      const [firstPart, rest] = remaining.split(/\?(.+)/s);
+      const firstParams = new URLSearchParams(firstPart);
+      for (const [k, v] of firstParams) result.append(k, v);
+      if (!rest) break;
+      remaining = rest;
+    }
+
+    // Extra treatment: also decodes values containing %3F encoded
+    // and attempts to separate them in such cases. Example: custom=example%3Futm_source%3Dtest
+    const entries = Array.from(result.entries());
+    for (const [k, v] of entries) {
+      if (v.includes("%3F") || v.includes("%3f")) {
+        const decoded = decodeURIComponent(v);
+        if (decoded.includes("?")) {
+          const [valBefore, valAfter] = decoded.split(/\?(.+)/s);
+          result.set(k, valBefore);
+          const tail = new URLSearchParams(valAfter);
+          for (const [tk, tv] of tail) if (!result.has(tk)) result.append(tk, tv);
         }
       }
     }
-  }
 
-  return result;
-}
+    return result;
+  };
 
-/**
- * Faz merge seguro entre parâmetros da página atual e do link,
- * preservando UTMs da página quando existirem e normalizando queries malformadas.
- *
- * @param {string} baseUrl - ex: 'https://domain.com/page'
- * @param {string} rawLinkQuery - ex: linkUrl.search (pode ser malformada)
- * @param {string} rawCurrentQuery - ex: window.location.search
- * @param {Array<string>} excludeParams - lista de params a remover
- * @returns {string} URL final (baseUrl + '?' + mergedParams) ou baseUrl se vazio
- */
-function sanitizeAndMergeParams(baseUrl, rawLinkQuery = "", rawCurrentQuery = "", excludeParams = []) {
-  try {
-    // Normaliza queries malformadas
-    const linkSearch = normalizeQueryString(rawLinkQuery);
-    const currentSearch = new URLSearchParams((rawCurrentQuery || "").replace(/^[?&]+/, ""));
-
-    // UTMs que queremos preservar da página atual, se existirem
-    const utmKeys = ["utm_source", "utm_medium", "utm_campaign", "utm_id", "utm_term", "utm_content"];
-
-    // Primeiro, adiciona os parâmetros do link à currentSearch,
-    // mas NÃO sobrescreve UTMs que já existam em currentSearch.
-    for (const [key, value] of linkSearch.entries()) {
-      const keyLower = key.toLowerCase();
-      const isUtm = utmKeys.includes(keyLower);
-      if (isUtm && currentSearch.has(key)) {
-        // preserva currentSearch (não sobrescreve)
-        continue;
-      }
-      // caso contrário, set (sobrescreve ou adiciona)
-      currentSearch.set(key, value);
-    }
-
-    // Remove parâmetros indesejados
-    excludeParams.forEach((p) => currentSearch.delete(p));
-
-    const finalQuery = currentSearch.toString();
-    return finalQuery ? `${baseUrl}?${finalQuery}` : baseUrl;
-  } catch (err) {
-    console.error("[sanitizeAndMergeParams] erro:", err);
-    return baseUrl;
-  }
-}
-
-/**
- * Atualiza generateHref para usar sanitizeAndMergeParams,
- * preservando o hash (#) corretamente.
- * @param {HTMLElement} linkElement
- * @param {String} origin
- * @param {String} pathname
- * @param {String} hash
- * @return {Object} { href: String, isHashSymbolPresent: bool }
- */
-function generateHref(linkElement, origin, pathname, hash) {
-  const { excludeParams } = config;
-
-  const baseUrl = origin + pathname;
-  const linkUrl = new URL(linkElement.href);
-  const linkQuery = linkUrl.search; // pode ser malformada (ex: ?custom=example?utm_source=...)
-  const currentQuery = window.location.search;
-
-  const merged = sanitizeAndMergeParams(baseUrl, linkQuery, currentQuery, excludeParams);
-
-  // Garante que o hash seja mantido (se existir)
-  const hasHash = !!hash;
-  const finalHref = merged + (hasHash ? hash : "");
-
-  return { href: finalHref, isHashSymbolPresent: hasHash };
-}
-
-/**
- * Redireciona o link para diferentes cenários
- * @param {Event} event
- * @param {bool} isHashSymbolPresent
- * @param {String} href
- * @param {String} page
- * @param {String} hash
- * @param {String} target
- */
-function handleLinkRedirect(
-  event,
-  isHashSymbolPresent,
-  href,
-  page,
-  hash,
-  target
-) {
-  event.preventDefault();
-
-  const locationPage = window.location.origin + window.location.pathname;
-
-  if (isHashSymbolPresent && page === locationPage && hash) {
-    document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
-    return;
-  }
-
-  target === "_blank"
-    ? window.open(href, "_blank")
-    : (window.location.href = href);
-}
-
-/**
- * Verifica se o formulário deve ser manipulado
- * Útil para aceitar alguns formulários de busca.
- * @param {HTMLFormElement} formElement
- * @return {bool}
- */
-function shouldHandleForm(formElement) {
-  const { acceptFormIds } = config;
-  return acceptFormIds.some((acceptedFormId) =>
-    formElement.id.includes(acceptedFormId)
-  );
-}
-
-/**
- * Remove parâmetros de busca da URL
- * Útil navegação pós pesquisa no site
- * @param {String} search
- * @return {String}
- */
-function removeURLParams(search) {
-  const { excludeParams } = config;
-  const urlParams = new URLSearchParams(search);
-
-  excludeParams.forEach((param) => {
-    urlParams.delete(param);
-  });
-
-  return urlParams.toString() ? "?" + urlParams.toString() : "";
-}
-
-/**
- * Adiciona parâmetros UTM ao formulário antes do envio.
- * @param {HTMLFormElement} formElement
- */
-function addParamsToForm(formElement) {
-  const locationHash = window.location.hash;
-  const locationSearch = locationHash.includes("?")
-    ? "?" + locationHash.split("?")[1]
-    : window.location.search;
-
-  if (locationSearch) {
-    const urlParams = new URLSearchParams(removeURLParams(locationSearch));
-
-    for (const [key, value] of urlParams) {
-      const input = document.createElement("input");
-      input.type = "hidden";
-      input.name = key;
-      input.value = value;
-      formElement.appendChild(input);
-    }
-  }
-}
-
-// Inicialização
-document.addEventListener("DOMContentLoaded", function () {
-  // Corrige links malformados no HTML após o carregamento (camada de segurança extra)
-  document.querySelectorAll("a[href]").forEach((link) => {
-    if (!shouldHandleLink(link)) return;
-
-    const url = new URL(link.href);
-
-    // Mantém o hash original
-    const hash = url.hash || "";
-
-    const sanitized = sanitizeAndMergeParams(
-      url.origin + url.pathname,
-      url.search,
-      "",
-      config.excludeParams
+  /**
+   * Updates generateHref to use sanitizeAndMergeParams,
+   * preserving the hash (#) correctly.
+   * @param {HTMLElement} linkElement
+   * @param {String} origin
+   * @param {String} pathname
+   * @param {String} hash
+   * @return {Object} { href: String, isHashSymbolPresent: bool }
+   */
+  generateHref = (linkElement, origin, pathname, hash) => {
+    const { excludeParams } = this.config;
+    const baseUrl = origin + pathname;
+    const linkUrl = new URL(linkElement.href);
+    const merged = this.sanitizeAndMergeParams(
+      baseUrl,
+      linkUrl.search,
+      window.location.search,
+      excludeParams
     );
+    // Ensures that the hash is maintained (if it exists)
+    const hasHash = !!hash;
+    return { href: merged + (hasHash ? hash : ""), isHashSymbolPresent: hasHash };
+  };
 
-    // Reanexa o hash, se existir
-    const sanitizedWithHash = sanitized + hash;
+  /**
+   * Redirects the link to different scenarios
+   * @param {Event} event
+   * @param {bool} isHashSymbolPresent
+   * @param {String} href
+   * @param {String} page
+   * @param {String} hash
+   * @param {String} target
+   */
+  handleLinkRedirect = (event, isHashSymbolPresent, href, page, hash, target) => {
+    event.preventDefault();
 
-    if (sanitizedWithHash !== link.href) {
-      link.href = sanitizedWithHash;
+    const current = window.location.origin + window.location.pathname;
+    if (isHashSymbolPresent && page === current && hash) {
+      document.querySelector(hash)?.scrollIntoView({ behavior: "smooth" });
+      return;
     }
-  });
 
-  // Manipulação de links
-  document.addEventListener("click", function (event) {
-    const linkElement = event.target.closest("a");
-    if (!linkElement || !shouldHandleLink(linkElement)) return;
-    handleLinkClick(event, linkElement);
-  });
+    target === "_blank" ? window.open(href, "_blank") : (window.location.href = href);
+  };
 
-  // Animação de scrollTop para links com target="_blank"
-  if (window.location.hash) {
-    document
-      .querySelector(window.location.hash)
-      ?.scrollIntoView({ behavior: "smooth" });
-  }
+  /**
+   * Removes search parameters from the URL.
+   * Useful for post-search navigation on the site.
+   * @param {String} search
+   * @return {String}
+   */
+  removeURLParams = (search) => {
+    const urlParams = new URLSearchParams(search);
+    this.config.excludeParams.forEach((param) => urlParams.delete(param));
+    return urlParams.toString() ? "?" + urlParams.toString() : "";
+  };
 
-  // Manipulação de botões de envio com clique manual (ex: via AJAX)
-  document.addEventListener("click", function (event) {
-    const button = event.target.closest("button, input[type='submit']");
-    if (!button) return;
+  /**
+   * Adds UTM parameters to the form before submission.
+   * @param {HTMLFormElement} formElement
+   * @returns {void}
+   */
+  addParamsToForm = (formElement) => {
+    const locationHash = window.location.hash;
+    const locationSearch = locationHash.includes("?")
+      ? "?" + locationHash.split("?")[1]
+      : window.location.search;
 
-    const form = button.closest("form");
-    if (!form) return;
-
-    if (shouldHandleForm(form)) {
-      // injeta parâmetros automaticamente
-      addParamsToForm(form);
+    if (locationSearch) {
+      const urlParams = new URLSearchParams(this.removeURLParams(locationSearch));
+      for (const [key, value] of urlParams) {
+        const input = document.createElement("input");
+        input.type = "hidden";
+        input.name = key;
+        input.value = value;
+        formElement.appendChild(input);
+      }
     }
-  });
-});
+  };
 
-export { addParamsToForm };
+  /**
+   * Binds click events to links for tracking and manipulation
+   * @returns {void}
+   */
+  bindLinkEvents = () => {
+    document.addEventListener("click", (event) => {
+      const linkElement = event.target.closest("a");
+      if (!linkElement || !this.shouldHandleLink(linkElement)) return;
+      this.handleLinkClick(event, linkElement);
+    });
+  };
+
+  /**
+   * Binds click events to buttons for form submission handling
+   * @returns {void}
+   */
+  bindButtonEvents = () => {
+    document.addEventListener("click", (event) => {
+      const button = event.target.closest("button, input[type='submit']");
+      if (!button) return;
+
+      const form = button.closest("form");
+      if (!form) return;
+
+      const isAcceptedForm = this.config.acceptFormIds.some((id) =>
+        form.id.includes(id)
+      );
+
+      if (isAcceptedForm) {
+        this.addParamsToForm(form);
+      }
+    });
+  };
+
+  /**
+   * Restores scroll position for hash links on page load.
+   * @returns {void}
+   */
+  restoreScrollHash = () => {
+    if (window.location.hash) {
+      document.querySelector(window.location.hash)?.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+}
