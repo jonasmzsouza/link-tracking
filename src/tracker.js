@@ -2,7 +2,7 @@
  * Modular class for tracking and manipulating links and forms.
  * Compatible with WordPress and projects that use ES6 modules.
  */
-export class Tracking {
+export class ParamTracker {
   /**
    * @param {Object} customConfig - Custom client configuration
    */
@@ -21,7 +21,7 @@ export class Tracking {
 
     if (!customConfig.acceptOrigins || customConfig.acceptOrigins.length === 0) {
       throw new Error(
-        "Tracking: The 'acceptOrigins' property is mandatory in the configuration."
+        "ParamTracker: The 'acceptOrigins' property is mandatory in the configuration."
       );
     }
 
@@ -44,7 +44,7 @@ export class Tracking {
   }
 
   /**
-   * Initializes the tracking module
+   * Initializes the tracker module
    * @returns {void}
    */
   init = () => {

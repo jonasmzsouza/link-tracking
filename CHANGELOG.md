@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 The format follows the conventions of Conventional Commits(https://www.conventionalcommits.org) and semantic versioning (SemVer).
 
 ---
+
+## 🚀 2.0.0
+
+### 💥 Breaking Changes
+- Migrated from procedural script to **modular `ParamTracker` class**
+- Now requires **constructor-based configuration** (custom + default settings)
+- Added **validation for required parameters** — throws exception if missing
+
+### ♻️ Refactor
+- Rewritten architecture to improve maintainability and scalability
+- Enhanced parameter sanitization and event binding
+- Removed global functions in favor of instance methods
+
+---
+
 ## 🔁 1.4.1
 ### ♻️ Refactor
 - Removed handleFormSubmit function and update form submission handling to use manual click events.
@@ -67,6 +82,6 @@ The format follows the conventions of Conventional Commits(https://www.conventio
 - **Commit pattern:** Conventional Commits (https://www.conventionalcommits.org)  
 - **Versioning:** SemVer (`MAJOR.MINOR.PATCH`)
 - **Author:** Jonas Souza (https://github.com/jonasmzsouza)
-- **Repository:** Link Tracking (https://github.com/jonasmzsouza/link-tracking)
+- **Repository:** Link Tracking (https://github.com/jonasmzsouza/param-tracker)
 
 ---
