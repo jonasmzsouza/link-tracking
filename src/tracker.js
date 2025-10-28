@@ -1,6 +1,16 @@
-/**
+/*
+ * Tracker 2.0.1
+ * JavaScript script for intelligent manipulation of links and forms on websites, 
+ * preserving UTM parameters and removing irrelevant search parameters.
+ * 
  * Modular class for tracking and manipulating links and forms.
  * Compatible with WordPress and projects that use ES6 modules.
+ * 
+ * https://github.com/jonasmzsouza/param-tracker
+ *
+ * Copyright (c) 2023 Jonas Souza
+ * Released under the MIT license
+ * 
  */
 export class ParamTracker {
   /**
@@ -333,19 +343,28 @@ export class ParamTracker {
   };
 
   /**
-   * Adds UTM parameters to the form before submission.
+   * Adds UTM parameters to the form before submission, avoiding duplicates.
    * @param {HTMLFormElement} formElement
    * @returns {void}
    */
   addParamsToForm = (formElement) => {
+    if (!(formElement instanceof HTMLFormElement)) return;
+
     const locationHash = window.location.hash;
     const locationSearch = locationHash.includes("?")
       ? "?" + locationHash.split("?")[1]
       : window.location.search;
 
-    if (locationSearch) {
-      const urlParams = new URLSearchParams(this.removeURLParams(locationSearch));
-      for (const [key, value] of urlParams) {
+    if (!locationSearch) return;
+
+    const urlParams = new URLSearchParams(this.removeURLParams(locationSearch));
+    for (const [key, value] of urlParams) {
+      // Avoid duplicating parameters if there is already a field with the same name and value.
+      const existingInput = formElement.querySelector(
+        `input[name="${CSS.escape(key)}"][value="${CSS.escape(value)}"]`
+      );
+
+      if (!existingInput) {
         const input = document.createElement("input");
         input.type = "hidden";
         input.name = key;
