@@ -331,25 +331,6 @@ function addParamsToForm(formElement) {
   }
 }
 
-/**
- * Manipula o envio do formulário
- * Preserva URLSearchParams existente e adiciona as do formulário
- * @param {Event} event
- */
-function handleFormSubmit(event) {
-  const formElement = event.target;
-
-  if (shouldHandleForm(formElement)) {
-    event.preventDefault();
-
-    addParamsToForm(formElement);
-
-    // Desanexa o manipulador de evento de envio de formulário após o primeiro envio
-    formElement.removeEventListener("submit", handleFormSubmit);
-    formElement.submit();
-  }
-}
-
 // Inicialização
 document.addEventListener("DOMContentLoaded", function () {
   // Corrige links malformados no HTML após o carregamento (camada de segurança extra)
@@ -390,9 +371,18 @@ document.addEventListener("DOMContentLoaded", function () {
       ?.scrollIntoView({ behavior: "smooth" });
   }
 
-  // Manipulação de formulários
-  document.querySelectorAll("form").forEach((form) => {
-    form.addEventListener("submit", handleFormSubmit);
+  // Manipulação de botões de envio com clique manual (ex: via AJAX)
+  document.addEventListener("click", function (event) {
+    const button = event.target.closest("button, input[type='submit']");
+    if (!button) return;
+
+    const form = button.closest("form");
+    if (!form) return;
+
+    if (shouldHandleForm(form)) {
+      // injeta parâmetros automaticamente
+      addParamsToForm(form);
+    }
   });
 });
 

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 The format follows the conventions of Conventional Commits(https://www.conventionalcommits.org) and semantic versioning (SemVer).
 
 ---
+## 🔁 1.4.1
+### ♻️ Refactor
+- Removed handleFormSubmit function and update form submission handling to use manual click events.
+
+---
 
 ## 🧩 1.4.0
 ### 🔧 Chore
