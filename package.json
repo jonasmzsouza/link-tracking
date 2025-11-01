@@ -1,6 +1,6 @@
 {
   "name": "param-tracker",
-  "version": "2.0.1",
+  "version": "2.1.0",
   "description": "Script for manipulating links and forms, preserving UTM parameters and clearing irrelevant search parameters.",
   "main": "dist/tracker.min.js",
   "type": "module",

@@ -1,20 +1,21 @@
 # 🧭 ParamTracker
 
-JavaScript script for intelligent manipulation of **links and forms** on websites, preserving **UTM parameters** and removing irrelevant search parameters.  
+**ParamTracker** is a lightweight JavaScript utility for intelligent manipulation of **links** and **forms**, preserving **UTM parameters**, cleaning irrelevant search parameters, and ensuring consistent URL behavior across your website.
 Ideal for use on WordPress pages, landing pages, or any website that relies on campaign tracking.
+
+Now available for **ES Modules** *and* **global browser usage (UMD/IIFE)** — no build tools required.
 
 ---
 
 ## 🚀 Features
 
-✅ Maintains UTM parameters (`utm_source`, `utm_medium`, etc.)  
+✅ Preserves UTM parameters (`utm_source`, `utm_medium`, etc.)  
 ✅ Removes unnecessary search parameters (`s`, `type`, `category`, etc.)  
-✅ Ensures the cleanup of malformed links (with `??`, `%3F`, etc.)  
-✅ Preserves `#hash` for smooth navigation between sections  
-✅ Automatically adds UTMs to configured forms  
-✅ Compatible with multiple domains (including subdomains)  
-✅ Modular class — configurable via constructor  
-✅ Supports ES Modules (`export` / `import`)
+✅ Ensures cleanup of malformed links (`??`, `%3F`, etc.)  
+✅ Keeps anchors (`#hash`) for smooth navigation  
+✅ Automatically propagates UTMs to configured forms  
+✅ Supports multiple domains (including subdomains)  
+✅ Works with ES Modules (`import/export`) **or directly in browsers** via UMD/IIFE
 
 ---
 
@@ -32,33 +33,41 @@ npm install
 
 ## 🧠 Usage
 
-Include the `tracker.js` script on your website:
+#### 1. ES Modules
+```javascript
+import ParamTracker from './tracker.min.js';
 
-```html
-<script type="module" src="tracker.js"></script>
+const tracker = new ParamTracker({
+  acceptOrigins: ['example.com'],
+  acceptFormIds: ['registrationForm']
+  // custom configuration
+});
 ```
 
-then:
-
+#### 2. Global / Browser (UMD/IIFE)
 ```html
+<script src="./tracker.min.js"></script>
 <script>
-// Custom configuration
-const tracker = new ParamTracker({
-  acceptOrigins: ["domain.com"],
-  acceptFormIds: ["registrationForm"],
-  ignorePathnames: ["/wp-admin/"],
-  ignoreClasses: ["no-track", "page-numbers"],
-  dataItems: ["tab", "modal", "collapse"],
-  attributes: ["role", "data-toggle"],
-  excludeParams: ["category", "type"]
-});
+  const tracker = new ParamTracker({
+    acceptOrigins: ['example.com'],
+    acceptFormIds: ['registrationForm']
+    // custom configuration
+  });
+
+  tracker.init();
 </script>
 ```
 
-Or import into another module:
+#### 3. Node.js / CommonJS
 
 ```javascript
-import ParamTracker from "./tracker.js";
+const { ParamTracker } = require('./tracker.min.js');
+
+const tracker = new ParamTracker({
+  acceptOrigins: ['example.com'],
+  acceptFormIds: ['registrationForm']
+  // custom configuration
+});
 ```
 
 The tracker now handles:
@@ -71,15 +80,15 @@ The tracker now handles:
 
 ## 🧩 Configuration Options
 
-| Option            | Description                                       |
-| ----------------- | ------------------------------------------------- |
-| `acceptOrigins`   | Array of allowed domains for tracking             |
-| `acceptFormIds`   | Array of form IDs to apply UTM propagation        |
-| `ignorePathnames` | Array of URL paths to ignore                      |
-| `ignoreClasses`   | Array of CSS classes to ignore                    |
-| `excludeParams`   | Array of query parameters to exclude              |
-| `dataItems`       | Optional array of custom data attributes to track |
-| `attributes`      | Optional array of element attributes to copy      |
+| Option            | Type       | Description                                |
+| ----------------- | ---------- | ------------------------------------------ |
+| `acceptOrigins`   | `string[]` | Domains/subdomains allowed for propagation |
+| `acceptFormIds`   | `string[]` | Form IDs that should receive UTMs          |
+| `ignoreClasses`   | `string[]` | Classes to ignore from tracking            |
+| `ignorePathnames` | `string[]` | URL pathnames to exclude                   |
+| `excludeParams`   | `string[]` | Parameters to remove from the URL          |
+| `dataItems`       | `string[]` | Data attributes to include in propagation  |
+| `attributes`      | `string[]` | Extra attributes to manage in propagation  |
 
 ---
 
@@ -111,10 +120,8 @@ A quick example of using **ParamTracker** on a website with links and forms.
     <button type="submit">Submit</button>
   </form>
 
-  <script type="module" src="./tracker.js"></script>
-  <script type="module">
-    import ParamTracker from './tracker.js';
-
+  <script src="./tracker.min.js"></script>
+  <script>
     // Initialize tracker with configuration
     const tracker = new ParamTracker({
       acceptOrigins: ["example.com"],

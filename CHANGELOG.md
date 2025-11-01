@@ -5,6 +5,14 @@ The format follows the conventions of Conventional Commits(https://www.conventio
 
 ---
 
+## ✨ 2.1.0
+### ✨ Features
+- Added **UMD/IIFE compatibility**, allowing use in browsers without `type="module"`.
+- The class `ParamTracker` is now globally accessible via `window.ParamTracker`.
+- Maintains ES Module export for compatibility with modern workflows.
+
+---
+
 ## 🐞 2.0.1
 ### 🐛 Fixes
 - Avoids duplication of parameters by the addParamsToForm function if a field with the same name and value already exists in the form.
