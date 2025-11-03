@@ -1,14 +1,26 @@
 {
   "name": "param-tracker",
   "version": "2.1.0",
-  "description": "Script for manipulating links and forms, preserving UTM parameters and clearing irrelevant search parameters.",
-  "main": "dist/tracker.min.js",
+  "description": "Universal JavaScript utility for tracking and preserving UTM parameters in links and forms — compatible with browsers, Node.js, and ES Modules.",
   "type": "module",
+  "main": "dist/tracker.cjs.js",
+  "module": "dist/tracker.esm.js",
+  "browser": "dist/tracker.min.js",
+  "unpkg": "dist/tracker.min.js",
+  "jsdelivr": "dist/tracker.min.js",
+  "sideEffects": false,
+  "exports": {
+    ".": {
+      "import": "./dist/tracker.esm.js",
+      "require": "./dist/tracker.cjs.js",
+      "default": "./dist/tracker.min.js"
+    }
+  },
   "scripts": {
     "lint": "eslint src/",
     "lint:fix": "eslint src/ --fix",
-    "build": "node -e \"const esbuild=require('esbuild');const pkg=require('./package.json');esbuild.buildSync({entryPoints:['src/tracker.js'],bundle:true,minify:true,outfile:'dist/tracker.min.js',banner:{js:'/*! ' + pkg.name + ' v' + pkg.version + ' | ' + (pkg.repository?.url || '') + ' */'}})\"",
-    "watch": "esbuild src/tracker.js --bundle --watch --outfile=dist/tracker.min.js",
+    "build": "node build.mjs",
+    "watch": "node build.mjs --watch",
     "test": "echo 'No tests configured yet.'"
   },
   "repository": {
@@ -17,12 +29,23 @@
   },
   "keywords": [
     "utm",
+    "tracker",
     "tracking",
+    "forms",
+    "links",
     "link-cleaner",
     "url-utils",
     "javascript",
+    "browser",
     "frontend",
+    "analytics",
     "seo",
+    "esbuild",
+    "browser",
+    "esmodule",
+    "commonjs",
+    "amd",
+    "nodejs",
     "no-jquery"
   ],
   "author": {

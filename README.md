@@ -1,27 +1,28 @@
 # 🧭 ParamTracker
 
-**ParamTracker** is a lightweight JavaScript utility for intelligent manipulation of **links** and **forms**, preserving **UTM parameters**, cleaning irrelevant search parameters, and ensuring consistent URL behavior across your website.
-Ideal for use on WordPress pages, landing pages, or any website that relies on campaign tracking.
+**ParamTracker** is a lightweight JavaScript library for intelligent manipulation of **links and forms**, preserving **UTM parameters** and removing irrelevant search parameters.  
+It now supports **ES Modules**, **CommonJS**, and **browser global (UMD)** environments — perfect for WordPress, landing pages, or custom analytics integrations.
 
-Now available for **ES Modules** *and* **global browser usage (UMD/IIFE)** — no build tools required.
+Now available for **ES Modules** _and_ **global browser usage (UMD/IIFE)** — no build tools required.
 
 ---
 
 ## 🚀 Features
 
-✅ Preserves UTM parameters (`utm_source`, `utm_medium`, etc.)  
+✅ Maintains UTM parameters (`utm_source`, `utm_medium`, etc.)  
 ✅ Removes unnecessary search parameters (`s`, `type`, `category`, etc.)  
-✅ Ensures cleanup of malformed links (`??`, `%3F`, etc.)  
-✅ Keeps anchors (`#hash`) for smooth navigation  
-✅ Automatically propagates UTMs to configured forms  
-✅ Supports multiple domains (including subdomains)  
-✅ Works with ES Modules (`import/export`) **or directly in browsers** via UMD/IIFE
+✅ Cleans malformed links (`??`, `%3F`, etc.)  
+✅ Preserves `#hash` anchors for smooth navigation  
+✅ Automatically adds UTMs to configured forms  
+✅ Compatible with multiple domains (including subdomains)  
+✅ Supports ES Modules (`export` / `import`)  
+✅ Fully compatible with CommonJS, AMD, and browser globals (UMD)
 
 ---
 
 ## ⚙️ Installation
 
-Clone the project and install the development dependencies:
+### Clone and install:
 
 ```bash
 git clone https://github.com/jonasmzsouza/param-tracker.git
@@ -29,48 +30,65 @@ cd param-tracker
 npm install
 ```
 
+### Or via NPM
+
+```bash
+npm install param-tracker
+```
+
+### Or Via CDN (UMD ready):
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/param-tracker@latest/dist/tracker.min.js"></script>
+```
+
+### Or manual download
+
+Download one the latest [releases](https://github.com/jonasmzsouza/param-tracker/releases). The files you need are inside the dist.
+
 ---
 
 ## 🧠 Usage
 
-#### 1. ES Modules
+#### 🧩 Option 1 — Browser (Global Usage)
+
+```html
+<script src="https://cdn.jsdelivr.net/npm/param-tracker@latest/dist/tracker.min.js"></script>
+<script>
+  const tracker = new ParamTracker({
+    acceptOrigins: ["example.com"],
+    acceptFormIds: ["registrationForm"]
+    // custom configuration
+  });
+</script>
+```
+
+#### 📦 Option 2 — ES Module (Modern Apps)
+
 ```javascript
-import ParamTracker from './tracker.min.js';
+import { ParamTracker } from "param-tracker";
 
 const tracker = new ParamTracker({
-  acceptOrigins: ['example.com'],
-  acceptFormIds: ['registrationForm']
+  acceptOrigins: ["example.com"],
+  acceptFormIds: ["registrationForm"]
   // custom configuration
 });
 ```
 
-#### 2. Global / Browser (UMD/IIFE)
-```html
-<script src="./tracker.min.js"></script>
-<script>
-  const tracker = new ParamTracker({
-    acceptOrigins: ['example.com'],
-    acceptFormIds: ['registrationForm']
-    // custom configuration
-  });
-
-  tracker.init();
-</script>
-```
-
-#### 3. Node.js / CommonJS
+#### 💻 Option 3 — Node.js / CommonJS
 
 ```javascript
-const { ParamTracker } = require('./tracker.min.js');
+const { ParamTracker } = require("param-tracker");
 
 const tracker = new ParamTracker({
-  acceptOrigins: ['example.com'],
-  acceptFormIds: ['registrationForm']
+  acceptOrigins: ["example.com"],
+  acceptFormIds: ["registrationForm"]
   // custom configuration
 });
 ```
 
 The tracker now handles:
+
 - All links within the accepted origins
 - Adds parameters to accepted forms.
 - URL parameter propagation and sanitization
@@ -103,52 +121,57 @@ A quick example of using **ParamTracker** on a website with links and forms.
 ```html
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>ParamTracker Demo</title>
-</head>
-<body>
+  <head>
+    <meta charset="UTF-8" />
+    <title>ParamTracker Demo</title>
+  </head>
+  <body>
+    <!-- Example Links -->
+    <a href="https://example.com/page1?utm_source=google&utm_medium=cpc">Page 1</a>
+    <a href="https://example.com/page2">Page 2</a>
 
-  <!-- Example Links -->
-  <a href="https://example.com/page1?utm_source=google&utm_medium=cpc">Page 1</a>
-  <a href="https://example.com/page2">Page 2</a>
+    <!-- Example Form -->
+    <form id="registrationForm">
+      <input type="text" name="name" placeholder="Name" />
+      <input type="email" name="email" placeholder="Email" />
+      <button type="submit">Submit</button>
+    </form>
 
-  <!-- Example Form -->
-  <form id="registrationForm">
-    <input type="text" name="name" placeholder="Name">
-    <input type="email" name="email" placeholder="Email">
-    <button type="submit">Submit</button>
-  </form>
-
-  <script src="./tracker.min.js"></script>
-  <script>
-    // Initialize tracker with configuration
-    const tracker = new ParamTracker({
-      acceptOrigins: ["example.com"],
-      acceptFormIds: ["registrationForm"],
-      ignoreClasses: ["no-track"],
-      excludeParams: ["s", "type", "category"]
-    });
-  </script>
-
-</body>
+    <script src="https://cdn.jsdelivr.net/npm/param-tracker@latest/dist/tracker.min.js"></script>
+    <script>
+      // Initialize tracker with configuration
+      const tracker = new ParamTracker({
+        acceptOrigins: ["example.com"],
+        acceptFormIds: ["registrationForm"],
+        ignoreClasses: ["no-track"],
+        excludeParams: ["s", "type", "category"]
+      });
+    </script>
+  </body>
 </html>
 ```
 
 ### 2. How it Works
+
 1. Links:
- - Preserves UTM parameters across all clicks on accepted domains.
- - Sanitizes invalid/malformed query strings.
- - Preserves #hash for smooth navigation.
+
+- Preserves UTM parameters across all clicks on accepted domains.
+- Sanitizes invalid/malformed query strings.
+- Preserves #hash for smooth navigation.
+
 2. Forms:
+
 - Automatically appends preserved UTM parameters to configured forms.
 - Ignores forms not included in acceptFormIds.
+
 3. Configuration:
+
 - Add multiple domains via acceptOrigins.
 - Exclude specific URL parameters or elements with ignoreClasses.
 - Track custom data attributes using dataItems and attributes.
 
 ### 3. Example Output
+
 - Clicking `<a href="https://example.com/page2">` with `?utm_source=google` on the current page will navigate to:
 
 ```bash
@@ -158,20 +181,30 @@ https://example.com/page2?utm_source=google
 - Submitting the form will automatically include UTM parameters in the POST request.
 
 ### 4. Notes
+
 - The tracker only affects links and forms within the accepted origins.
 - Works in modern browsers supporting ES Modules (import / export).
+
 ---
 
 ## 🧪 Scripts úteis
 
 - Lint:
+
 ```bash
 npm run lint
 ```
 
 - Lint with automatic correction:
+
 ```bash
 npm run lint:fix
+```
+
+- Build library:
+
+```bash
+npm run build
 ```
 
 ---

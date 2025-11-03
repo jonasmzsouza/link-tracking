@@ -7,9 +7,25 @@ The format follows the conventions of Conventional Commits(https://www.conventio
 
 ## ✨ 2.1.0
 ### ✨ Features
-- Added **UMD/IIFE compatibility**, allowing use in browsers without `type="module"`.
-- The class `ParamTracker` is now globally accessible via `window.ParamTracker`.
-- Maintains ES Module export for compatibility with modern workflows.
+#### Added
+- Full **UMD + ESM compatibility**:
+  - Works in browsers via `<script>`
+  - Works in Node.js via `require()`
+  - Works in modern bundlers via `import`
+  - Supports AMD loaders (RequireJS)
+- Adds global fallback to `window.ParamTracker`
+
+### 🧠 Improvements
+- Simplified the factory pattern for better maintainability
+- Unified exports for consistent behavior across environments
+
+### 🛠️ Build
+- Added build.mjs script to automate the build process
+- Configured builds for UMD, ESM, and CommonJS formats
+- Generated both minified and unminified versions
+- Cleaned up the dist/ folder before each build
+- Included automatic banner with version and license information
+- Updated tracker.js, tracker.cjs.js, and tracker.esm.js with new build outputs
 
 ---
 
