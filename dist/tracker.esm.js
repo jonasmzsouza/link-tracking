@@ -1,4 +1,4 @@
-/*! ParamTracker 2.1.0 | MIT License | (c) Jonas Souza 2025 | https://github.com/jonasmzsouza/param-tracker */
+/*! ParamTracker 3.0.0 | MIT License | (c) Jonas Souza 2025 | https://github.com/jonasmzsouza/param-tracker */
 
 // src/tracker.js
 var ParamTracker = class {
@@ -7,41 +7,93 @@ var ParamTracker = class {
    */
   constructor(customConfig = {}) {
     const defaults = {
-      acceptOrigins: [],
-      // mandatory ["domain.com"]
-      acceptFormIds: [],
-      //track accepted forms
-      ignorePathnames: [],
-      //ignore tracker in specific pathnames
-      ignoreClasses: [],
-      //ignore links containing the classes
-      ignoreProtocols: ["mailto:", "tel:"],
-      //ignore links containing protocols
-      dataItems: [],
-      //ignore links containing data values in specific link attributes
-      attributes: [],
-      //specific link attributes
-      includeParams: ["utm_source", "utm_medium", "utm_campaign", "utm_id", "utm_term", "utm_content"],
-      excludeParams: []
-      //remove search or filter parameters
+      /**
+       * FORM CONFIGURATION
+       * Controls how parameters are propagated to HTML forms.
+       */
+      form: {
+        /**
+         * List of form element IDs that should receive UTM and custom parameters automatically.
+         * Example: ["contactForm", "leadForm"]
+         */
+        acceptFormIds: []
+      },
+      /**
+       * LINK CONFIGURATION
+       * Defines how links (<a> elements) are filtered, ignored, and processed.
+       */
+      link: {
+        /**
+         * Accepted domains or subdomains for parameter propagation.
+         * Any link whose hostname is not in this list will be ignored.
+         * Default: current page hostname.
+         * Example: ["example.com", "another.com"]
+         * Note: subdomains are accepted automatically (e.g., *.example.com).
+         */
+        acceptOrigins: [window?.location?.hostname?.toLowerCase() || ""],
+        /**
+         * List of URL pathnames where tracking should be disabled.
+         * Example: ["/admin", "/manage"]
+         */
+        ignorePathnames: [],
+        /**
+         * CSS class names to skip from tracking.
+         * Any link containing one of these classes will be ignored.
+         * Example: ["no-track", "external-link"]
+         */
+        ignoreClasses: [],
+        /**
+         * URL protocols that should not be tracked or modified.
+         * These are typically non-web or unsafe links (e.g. downloads, mailto, file, blob, etc.).
+         * Example: ["mailto:", "tel:", "ftp:"]
+         */
+        ignoreProtocols: [
+          "mailto:",
+          "tel:",
+          "sms:",
+          "file:",
+          "blob:",
+          "data:",
+          "ftp:",
+          "ftps:",
+          "javascript:"
+        ],
+        /**
+         * Values that, when matched, will cause a link to be ignored.
+         * Used in conjunction with `manageAttributes` to check specific attributes.
+         * Example:
+         *   manageAttributes: ["role", "data-custom", "download"]
+         *   ignoreAttrValues: ["button", "dropdown", "tab", "modal"]
+         */
+        ignoreAttrValues: [],
+        /**
+         * List of link attributes to inspect for matching values.
+         * Typically used with `ignoreAttrValues` to skip links with certain patterns.
+         * Example: ["role", "data-custom", "download"]
+         */
+        manageAttributes: [],
+        /**
+         * Parameters to preserve and propagate between links or forms.
+         * Commonly used for marketing attribution (UTM parameters).
+         * Example: ["utm_source", "utm_medium", "utm_campaign", "ref"]
+         */
+        includeParams: [
+          "utm_source",
+          "utm_medium",
+          "utm_campaign",
+          "utm_id",
+          "utm_term",
+          "utm_content"
+        ],
+        /**
+         * Parameters to remove from the URL before propagation.
+         * Useful for cleaning up unnecessary or sensitive query parameters.
+         * Example: ["s", "type", "category"]
+         */
+        excludeParams: []
+      }
     };
-    if (!customConfig.acceptOrigins || customConfig.acceptOrigins.length === 0) {
-      throw new Error(
-        "ParamTracker: The 'acceptOrigins' property is mandatory in the configuration."
-      );
-    }
-    this.config = {
-      ...defaults,
-      ...customConfig,
-      acceptOrigins: this.sanitizeStringArray(customConfig.acceptOrigins),
-      acceptFormIds: this.sanitizeStringArray(customConfig.acceptFormIds || []),
-      ignorePathnames: this.mergeUnique(defaults.ignorePathnames, customConfig.ignorePathnames),
-      ignoreClasses: this.mergeUnique(defaults.ignoreClasses, customConfig.ignoreClasses),
-      ignoreProtocols: this.mergeUnique(defaults.ignoreProtocols, customConfig.ignoreProtocols),
-      dataItems: this.mergeUnique(defaults.dataItems, customConfig.dataItems),
-      attributes: this.mergeUnique(defaults.attributes, customConfig.attributes),
-      excludeParams: this.mergeUnique(defaults.excludeParams, customConfig.excludeParams)
-    };
+    this.config = this.mergeConfig(defaults, customConfig);
     document.addEventListener("DOMContentLoaded", () => this.init());
   }
   /**
@@ -55,25 +107,65 @@ var ParamTracker = class {
     this.restoreScrollHash();
   };
   /**
-   * Ensures an array contains only unique, non-empty strings.
-   * Removes invalid entries such as objects, numbers, null, undefined.
+   * Sanitizes string arrays: trims, lowercases, deduplicates, and optionally ensures `:` suffix.
+   * 
    * @param {Array<any>} arr
+   * @param {Object} [options]
+   * @param {boolean} [options.lowercase=false]
+   * @param {boolean} [options.ensureColon=false]
    * @returns {Array<string>}
    */
-  sanitizeStringArray = (arr = []) => {
+  sanitizeStringArray = (arr = [], options = {}) => {
     if (!Array.isArray(arr)) return [];
-    return [...new Set(
-      arr.filter((item) => typeof item === "string" && item.trim() !== "").map((item) => item.trim())
-    )];
+    const { lowercase = false, ensureColon = false } = options;
+    const normalized = arr.filter((item) => typeof item === "string" && item.trim() !== "").map((item) => {
+      let clean = item.trim();
+      if (lowercase) clean = clean.toLowerCase();
+      if (ensureColon && !clean.endsWith(":")) clean += ":";
+      return clean;
+    });
+    return [...new Set(normalized)];
   };
   /**
-   * Merges two arrays and sanitizes the result to unique, non-empty strings.
-   * @param {Array<string>} defaultArr
-   * @param {Array<string>} customArr
+   * Merges two arrays safely, removing invalid entries and duplicates.
+   * Delegates normalization rules to `sanitizeStringArray`.
+   * 
+   * @param {Array<any>} defaultArr - Default configuration array
+   * @param {Array<any>} customArr - Custom configuration array
+   * @param {Object} [options] - Normalization options
+   * @param {boolean} [options.lowercase=false] - Convert all strings to lowercase
+   * @param {boolean} [options.ensureColon=false] - Ensure trailing colon at the end (useful for protocols)
    * @returns {Array<string>}
    */
-  mergeUnique = (defaultArr = [], customArr = []) => {
-    return this.sanitizeStringArray([...defaultArr, ...customArr]);
+  mergeUnique = (defaultArr = [], customArr = [], options = {}) => {
+    const safeDefault = Array.isArray(defaultArr) ? defaultArr : [];
+    const safeCustom = Array.isArray(customArr) ? customArr : [];
+    return this.sanitizeStringArray([...safeDefault, ...safeCustom], options);
+  };
+  /**
+  * Deeply validates and merges configuration objects.
+  * Ensures all expected arrays exist and are sanitized.
+  * @param {object} defaults
+  * @param {object} customConfig
+  */
+  mergeConfig = (defaults, customConfig = {}) => {
+    const safeCustomForm = customConfig.form && typeof customConfig.form === "object" ? customConfig.form : {};
+    const safeCustomLink = customConfig.link && typeof customConfig.link === "object" ? customConfig.link : {};
+    return {
+      form: {
+        acceptFormIds: this.mergeUnique(defaults.form?.acceptFormIds, safeCustomForm.acceptFormIds)
+      },
+      link: {
+        acceptOrigins: this.mergeUnique(defaults.link?.acceptOrigins, safeCustomLink.acceptOrigins, { lowercase: true }),
+        ignorePathnames: this.mergeUnique(defaults.link?.ignorePathnames, safeCustomLink.ignorePathnames, { lowercase: true }),
+        ignoreClasses: this.mergeUnique(defaults.link?.ignoreClasses, safeCustomLink.ignoreClasses),
+        ignoreProtocols: this.mergeUnique(defaults.link?.ignoreProtocols, safeCustomLink.ignoreProtocols, { lowercase: true, ensureColon: true }),
+        ignoreAttrValues: this.mergeUnique(defaults.link?.ignoreAttrValues, safeCustomLink.ignoreAttrValues),
+        manageAttributes: this.mergeUnique(defaults.link?.manageAttributes, safeCustomLink.manageAttributes, { lowercase: true }),
+        includeParams: this.mergeUnique(defaults.link?.includeParams, safeCustomLink.includeParams, { lowercase: true }),
+        excludeParams: this.mergeUnique(defaults.link?.excludeParams, safeCustomLink.excludeParams, { lowercase: true })
+      }
+    };
   };
   /**
    * Sanitizes existing links in the HTML
@@ -88,27 +180,94 @@ var ParamTracker = class {
         url.origin + url.pathname,
         url.search,
         "",
-        this.config.excludeParams
+        this.config.link.excludeParams
       );
       const finalHref = sanitized + hash;
       if (finalHref !== link.href) link.href = finalHref;
     });
   };
   /**
-   * Check if the URL is a file
-   * @param {*} url 
-   * @return {bool}
+   * Check if the URL points to a file (based on extension).
+   * Includes defensive checks and cached regex for better performance.
+   * @param {string} url
+   * @return {boolean}
    */
-  isFileUrl = (url) => {
-    const regex = /\.(pdf|docx?|xlsx?|pptx?|zip|rar|mp3|mp4|avi|wmv|mov|txt|csv|jpe?g|png|gif|svg|webp)(\?.*)?$/i;
-    try {
-      const { pathname, search, hash } = new URL(url);
-      const fullPath = pathname + search + hash;
-      return regex.test(fullPath);
-    } catch {
-      return false;
-    }
-  };
+  isFileUrl = (() => {
+    const extensions = [
+      "pdf",
+      "doc",
+      "docx",
+      "rtf",
+      "txt",
+      "md",
+      "json",
+      "xls",
+      "xlsx",
+      "csv",
+      "ppt",
+      "pptx",
+      "jpg",
+      "jpeg",
+      "png",
+      "gif",
+      "bmp",
+      "svg",
+      "avif",
+      "webp",
+      "mp3",
+      "wav",
+      "aac",
+      "mid",
+      "midi",
+      "flac",
+      "ogg",
+      "mp4",
+      "avi",
+      "mov",
+      "wmv",
+      "mkv",
+      "webm",
+      "zip",
+      "rar",
+      "7z",
+      "tar",
+      "gz",
+      "bz2",
+      "tar.gz",
+      "tar.bz2",
+      "exe",
+      "msi",
+      "dll",
+      "sys",
+      "bat",
+      "sh",
+      "css",
+      "js",
+      "php",
+      "xml",
+      "ts",
+      "jsx",
+      "tsx",
+      "vue",
+      "ini",
+      "conf",
+      "cfg",
+      "env",
+      "yaml",
+      "yml"
+    ];
+    const fileRegex = new RegExp(`\\.(${extensions.join("|")})$`, "i");
+    return function(url) {
+      if (typeof url !== "string" || url.trim() === "") return false;
+      try {
+        const normalizedUrl = url.startsWith("http") ? url : `https://${url.replace(/^\/+/, "")}`;
+        const { pathname } = new URL(normalizedUrl);
+        return fileRegex.test(pathname);
+      } catch {
+        return false;
+      }
+    };
+  })();
   /**
    * Check whether the link should be manipulated
    * @param {HTMLElement} linkElement
@@ -118,17 +277,17 @@ var ParamTracker = class {
     const {
       ignoreClasses,
       ignoreProtocols,
-      dataItems,
-      attributes
-    } = this.config;
+      ignoreAttrValues,
+      manageAttributes
+    } = this.config.link;
     const linkHref = linkElement.getAttribute("href") || "";
     if (ignoreClasses.some((cls) => linkElement.classList.contains(cls)))
       return false;
     if (ignoreProtocols.some((p) => linkHref.startsWith(p))) return false;
     if (isFileUrl(linkHref)) return false;
-    for (const attr of attributes) {
+    for (const attr of manageAttributes) {
       const val = linkElement.getAttribute(attr);
-      if (val && dataItems.includes(val)) return false;
+      if (val && ignoreAttrValues.includes(val)) return false;
     }
     return true;
   };
@@ -140,8 +299,9 @@ var ParamTracker = class {
    */
   isAcceptedOrigin = (origin) => {
     try {
-      const { hostname } = new URL(origin);
-      return this.config.acceptOrigins.some((baseDomain) => {
+      const normalizedOrigin = origin.startsWith("http") ? origin : `https://${origin}`;
+      const { hostname } = new URL(normalizedOrigin);
+      return this.config.link.acceptOrigins.some((baseDomain) => {
         const cleanDomain = baseDomain.trim().toLowerCase();
         return hostname === cleanDomain || hostname.endsWith(`.${cleanDomain}`);
       });
@@ -162,7 +322,7 @@ var ParamTracker = class {
     const target = linkElement.getAttribute("target");
     const hash = linkElement.hash;
     const page = origin + pathname;
-    if (this.isAcceptedOrigin(origin) && !this.config.ignorePathnames.some((p) => pathname.includes(p))) {
+    if (this.isAcceptedOrigin(origin) && !this.config.link.ignorePathnames.some((p) => pathname.includes(p))) {
       const { href, isHashSymbolPresent } = this.generateHref(
         linkElement,
         origin,
@@ -190,7 +350,7 @@ var ParamTracker = class {
       );
       for (const [key, value] of linkSearch.entries()) {
         const lowerKey = key.toLowerCase();
-        const isUtm = this.config.includeParams.includes(lowerKey);
+        const isUtm = this.config.link.includeParams.includes(lowerKey);
         if (isUtm && currentSearch.has(key)) continue;
         currentSearch.set(key, value);
       }
@@ -243,7 +403,7 @@ var ParamTracker = class {
    * @return {Object} { href: String, isHashSymbolPresent: bool }
    */
   generateHref = (linkElement, origin, pathname, hash) => {
-    const { excludeParams } = this.config;
+    const { excludeParams } = this.config.link;
     const baseUrl = origin + pathname;
     const linkUrl = new URL(linkElement.href);
     const merged = this.sanitizeAndMergeParams(
@@ -281,7 +441,7 @@ var ParamTracker = class {
    */
   removeURLParams = (search) => {
     const urlParams = new URLSearchParams(search);
-    this.config.excludeParams.forEach((param) => urlParams.delete(param));
+    this.config.link.excludeParams.forEach((param) => urlParams.delete(param));
     return urlParams.toString() ? "?" + urlParams.toString() : "";
   };
   /**
@@ -329,7 +489,7 @@ var ParamTracker = class {
       if (!button) return;
       const form = button.closest("form");
       if (!form) return;
-      const isAcceptedForm = this.config.acceptFormIds.some(
+      const isAcceptedForm = this.config.form.acceptFormIds.some(
         (id) => form.id.includes(id)
       );
       if (isAcceptedForm) {
