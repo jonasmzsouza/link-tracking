@@ -1,5 +1,5 @@
 /*
- * Tracker 2.1.0
+ * Tracker 3.0.0
  * JavaScript script for intelligent manipulation of links and forms on websites, 
  * preserving UTM parameters and removing irrelevant search parameters.
  * 
