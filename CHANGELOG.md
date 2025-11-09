@@ -5,6 +5,14 @@ The format follows the conventions of Conventional Commits(https://www.conventio
 
 ---
 
+## 🐞 3.0.1
+
+### 🐛 Fixes
+
+- Fixed `Uncaught ReferenceError: isFileUrl is not defined` by prefixing with `this.` inside the class scope.
+
+---
+
 ## 💥 3.0.0
 
 ### ⚙️ Refactor

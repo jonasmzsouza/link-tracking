@@ -279,7 +279,7 @@ class ParamTracker {
     if (ignoreProtocols.some((p) => linkHref.startsWith(p))) return false;
 
     // Ignore file links
-    if (isFileUrl(linkHref)) return false;
+    if (this.isFileUrl(linkHref)) return false;
 
     // Ignore links that have specific manageAttributes with values in ignoreAttrValues
     for (const attr of manageAttributes) {

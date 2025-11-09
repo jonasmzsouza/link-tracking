@@ -1,4 +1,4 @@
-/*! ParamTracker 3.0.0 | MIT License | (c) Jonas Souza 2025 | https://github.com/jonasmzsouza/param-tracker */
+/*! ParamTracker 3.0.1 | MIT License | (c) Jonas Souza 2025 | https://github.com/jonasmzsouza/param-tracker */
 (() => {
   // src/tracker.js
   var ParamTracker = class {
@@ -284,7 +284,7 @@
       if (ignoreClasses.some((cls) => linkElement.classList.contains(cls)))
         return false;
       if (ignoreProtocols.some((p) => linkHref.startsWith(p))) return false;
-      if (isFileUrl(linkHref)) return false;
+      if (this.isFileUrl(linkHref)) return false;
       for (const attr of manageAttributes) {
         const val = linkElement.getAttribute(attr);
         if (val && ignoreAttrValues.includes(val)) return false;
